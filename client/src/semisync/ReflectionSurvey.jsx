@@ -1,0 +1,347 @@
+/*
+ * Filename: ReflectionSurvey.jsx
+ * Author: Elijah Claggett
+ *
+ * Description:
+ * This ReactJS file surveys participants about their understanding of the chat and attitude toward their partner(s).
+ */
+import * as React from 'react';
+import { Button, Box, Container, Grid, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup, Textarea, Select, Slider, Option, Card } from '@mui/joy';
+import { useState, useEffect } from 'react';
+import { usePlayer, useGame, useStage, usePlayers, usePartModeCtx, useStageTimer } from "@empirica/core/player/classic/react";
+import { formatMoney, msToTime } from '../utils/formatting.js';
+
+import '../chat.scss';
+import { MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
+
+
+const followups = [
+    "Should teachers be punished for choosing to teach creationism as an alternative explanation?",
+    "What do you think decreasing access to guns will do to society?",
+    "Is there meaning to having the strongest military if it doesn't get involved in world conflicts?",
+    "Should teachers and books in public schools be banned from discussing sexuality and gender?",
+    "How much can economic prosperity be sacrificed to prevent climate change?",
+    "Do you think the CDC is a trustworthy source of information?",
+    "How would your opinions change if immigrants were given more social support services like food stamps and medicare?"
+  ];
+// TODO: Remove next?
+// TODO: Add timer
+export default function ReflectionSurvey({ next }) {
+
+    const player = usePlayer();
+    const players = usePlayer();
+    const pC = usePartModeCtx();
+    const playerId = player.get('id');
+    const gameParams = player.get('gameParams');
+    const game = useGame();
+    const stage = useStage();
+    const stageTimer = useStageTimer();
+
+    const alreadySubmitted = player.get('submittedSurvey') || false;
+    if (alreadySubmitted) { next(); } else { console.log('else'); }
+
+
+    let topic = player.get('topic') || -1;
+    if (typeof(topic) == 'string') {
+        topic = parseInt(topic.substring(1));
+    }
+
+    const followupQuestion = topic >= 0 ? followups[topic] : 'N/A';
+
+    const [step, setStep] = useState(1);
+    const [radioButtonVals, setRadioButtonVals] = useState();
+    const [preventClick, setPreventClick] = useState(false);
+    const [currentValue, setCurrentValue] = useState('');
+    const [partnerAnswer, setPartnerAnswer] = useState('');
+    const [partnerOpinion, setPartnerOpinion] = useState('');
+    const [sliderVal, setSliderVal] = useState(3);
+    const [politics, setPolitics] = useState(null);
+    const [gender, setGender] = useState(null);
+    const [age, setAge] = useState(null);
+    const [race, setRace] = useState(null);
+    const [school, setSchool] = useState(null);
+    const [income, setIncome] = useState(null);
+    const [isDisabled, setIsDisabled] = useState(true);
+
+    const feelingThermometerMarks = [
+        {
+            value: 0,
+            label: 'Very cold - I never want to speak to this person again',
+        },
+        {
+            value: 1,
+            label: 'Cold',
+        },
+        {
+            value: 2,
+            label: 'Slightly cold',
+        },
+        {
+            value: 3,
+            label: 'No feeling',
+        },
+        {
+            value: 4,
+            label: 'Slightly warm',
+        },
+        {
+            value: 5,
+            label: 'Warm',
+        },
+        {
+            value: 6,
+            label: 'Very warm - I wish I knew this person in real life',
+        },
+    ];
+
+    const chatLog = [];
+    const chatChannel = player.get('chatChannel');
+    const chatData = game.get(chatChannel) || [];
+    let msgKey = 'm';
+    let msgIdx = 0;
+    for (const msg of chatData) {
+        chatLog.push(
+            <Message className={msg.sender == -1 ? 'botMsg' : ''} model={{
+                message: msg.txt,
+                sentTime: "just now",
+                sender: 'p'+msg.sender,
+                direction: msg.sender == playerId ? 'outgoing' : 'incoming',
+                position: 'single'
+                }} key={msgKey + msgIdx}/>
+        );
+        msgIdx++;
+    }
+
+    function handleRadioButtonChange(evt) {
+        setCurrentValue(evt.target.value);
+        setRadioButtonVals(radioButtonVals => ({
+            ...radioButtonVals,
+            [evt.target.name]: evt.target.value
+        }));
+    }
+
+    function handleSliderChange(evt) {
+        setSliderVal(evt.target.value);
+    }
+
+    function handleButtonClick(evt) {
+        if (step == 1) { setStep(step + 1); }
+        else {
+            // console.log(player.ctx.game);
+            // stage.set('participantFinishStep', "{step: 'reflection_survey', playerId: player.id}");
+            player.set('submitReflectionSurvey', {
+                partnerAnswer: partnerAnswer,
+                partnerOpinion: partnerOpinion,
+                feelingThermometer: sliderVal,
+                politics: politics,
+                gender: gender,
+                age: age,
+                race: race,
+                school: school,
+                income: income,
+            });
+            game.set('partnerAnswer', {
+                playerId: player.id,
+                // partnerId: partnerId,
+                partnerAnswer: partnerAnswer,
+            });
+            // player.stage.set('submit', true);
+            next();
+        }
+    }
+
+    useEffect(() => {
+        if (step == 1) {
+            document.querySelectorAll('.feelingThermometer .MuiSlider-markLabel').forEach(el => el.classList.remove('active'));
+            document.querySelector('.feelingThermometer .MuiSlider-markLabel[data-index="' + sliderVal + '"]').classList.add('active');
+        }
+    }, [sliderVal])
+
+    let stepUI = <Stack sx={{
+        maxWidth: '50%',
+        minWidth: '27rem',
+        mx: 'auto',
+        mt: '10rem',
+    }} gap={6} >
+        <div>
+            <Typography level="h2">Reflection Survey</Typography>
+            <Typography level="body-md">
+                {msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)} remaining to finish the survey.<br />
+                Please answer these questions in at least a few sentences. (1/2)
+            </Typography>
+        </div>
+        <div>
+            <FormLabel sx={{mb: '0.5rem'}}>You were asked this follow-up question during the chat:</FormLabel>
+            <Card>
+                {followupQuestion}
+            </Card>
+        </div>
+        <FormControl>
+            <FormLabel>What was your partner's answer to this question?</FormLabel>
+            <Textarea minRows={3} value={partnerAnswer} onChange={(e) => setPartnerAnswer(e.target.value)} placeholder="Type answer here"/>
+            {/* <FormHelperText>This is a helper text.</FormHelperText> */}
+        </FormControl>
+        <FormControl>
+            <FormLabel>What is your partner's opinion about the conversation topic as a whole?</FormLabel>
+            <Textarea minRows={3} value={partnerOpinion} onChange={(e) => setPartnerOpinion(e.target.value)} placeholder="Type answer here"/>
+            {/* <FormHelperText>This is a helper text.</FormHelperText> */}
+        </FormControl>
+        <div>
+        <Typography level="h3">How would you rate your feelings toward your partner?</Typography>
+        <Box sx={{ height: 200, mt: 3 }}>
+            <Slider
+                orientation="vertical"
+                aria-label="Always visible"
+                defaultValue={3}
+                step={1}
+                marks={feelingThermometerMarks}
+                max={6}
+                min={0}
+                valueLabelDisplay="off"
+                className="feelingThermometer"
+                onChange={handleSliderChange}
+            />
+        </Box>
+        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row' }}>
+            <Button sx={{ my: 2 }} onClick={handleButtonClick}>Continue</Button>
+        </Box>
+    </Stack>;
+
+    if (step == 2) {
+        stepUI = <Stack sx={{
+            maxWidth: '50%',
+            mx: 'auto',
+            mt: '10rem',
+        }} gap={6} >
+            <div>
+                <Typography level="h2">Reflection Survey</Typography>
+                <Typography level="body-md">
+                    {msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)} remaining to finish the survey.<br />
+                    Please answer the following questions. (2/2)
+                </Typography>
+            </div>
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    What is your political affiliation?<span className="textRed">*</span>
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setPolitics(e.target.value); setIsDisabled(false);}}>
+                    <Option value="left">Left</Option>
+                    <Option value="left-leaning">Left-leaning</Option>
+                    <Option value="center">Center</Option>
+                    <Option value="right-leaning">Right-leaning</Option>
+                    <Option value="right">Right</Option>
+                    <Option value="other">Other</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    What is your gender?
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setGender(e.target.value)}}>
+                    <Option value="female">Female</Option>
+                    <Option value="male">Male</Option>
+                    <Option value="non-binary">Non-binary</Option>
+                    <Option value="other">Other</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    Which category includes your age?
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setAge(e.target.value)}}>
+                    <Option value="18-29">18-29</Option>
+                    <Option value="30-39">30-39</Option>
+                    <Option value="40-49">40-49</Option>
+                    <Option value="50-59">50-59</Option>
+                    <Option value="over60">60 or older</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    How would you identify your race and ethnicity?
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setRace(e.target.value)}}>
+                    <Option value="asian">Asian / Pacific Islander</Option>
+                    <Option value="black">Black / African American</Option>
+                    <Option value="hispanic">Hispanic / Latino</Option>
+                    <Option value="white">White, Caucasian, European (not Hispanic)</Option>
+                    <Option value="native">American Indian / Native American</Option>
+                    <Option value="multi">Multiple ethnicities</Option>
+                    <Option value="other">Other</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    What is the highest grade of school or year of college you completed?
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setSchool(e.target.value)}} >
+                    <Option value="high_school">High school or less</Option>
+                    <Option value="some_college">Some college (1-3 years)</Option>
+                    <Option value="college">College graduate (Bachelors)</Option>
+                    <Option value="masters">Masters</Option>
+                    <Option value="gt_masters">Above Masters degree</Option>
+                    <Option value="other">Other</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    About what wage and salary did you receive in the last year (including any type of income such as pension)?
+                </FormLabel>
+                <Select sx={{ maxWidth: '15rem' }} onChange={(e) => {setIncome(e.target.value)}} >
+                    <Option value="under20000">Less than $20,000</Option>
+                    <Option value="20000-34999">$20,000 - $34,999</Option>
+                    <Option value="35000-49999">$35,000 - $49,999</Option>
+                    <Option value="50000-74999">$50,000 - $74,999</Option>
+                    <Option value="75000-99999">$75,000 - $99,999</Option>
+                    <Option value="over100000">Over $100,000</Option>
+                    <Option value="no_answer">Decline to answer</Option>
+                </Select>
+            </FormControl>
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row' }}>
+                <Button sx={{ my: 2 }} onClick={handleButtonClick} disabled={isDisabled}>Continue</Button>
+            </Box>
+        </Stack>
+    }
+
+
+    return (
+        <Grid maxWidth="100vw" sx={{
+            width: '85%',
+            maxWidth: '60rem',
+            minWidth: '40rem',
+            mx: 'auto'
+        }}
+        container>
+            {stepUI}
+            <Stack
+            sx={{
+                width: '20rem',
+                // maxWidth: 'calc(50% - 2em)',
+                maxWidth: 'calc(100% - 27rem)',
+                mt: '10rem'
+                }}>
+            <Typography level='h2' sx={{mb: 1}}>Chat Log</Typography>
+            <MainContainer style={{ maxHeight: '50rem' }}>
+                <ChatContainer style={{height: '100%'}}>       
+                    <MessageList>
+                        {chatLog}
+                    </MessageList>
+                </ChatContainer>
+            </MainContainer>
+            </Stack>
+        </Grid>
+    );
+}

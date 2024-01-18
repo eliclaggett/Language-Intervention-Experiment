@@ -1,0 +1,174 @@
+@layer utilities {
+  /* Chrome, Safari, Edge, Opera */
+  input.number-arrows-none::-webkit-outer-spin-button,
+  input.number-arrows-none::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  /* Firefox */
+  input.number-arrows-none[type="number"] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* Custom CSS */
+#headerImg_recaptcha {
+  max-height: 15rem;
+}
+
+#recaptcha_dialog {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 2rem;
+}
+.MuiFormLabel-root {
+  font-size: 1.15rem !important;
+  font-weight: bold !important;
+}
+
+.tutorial_container img {
+  max-width: 20rem;
+  width: 80%;
+  margin: 0 auto 1rem auto;
+}
+
+.feelingThermometer .MuiSlider-rail {
+  background: linear-gradient(rgb(255, 112, 112), rgb(85, 146, 255)) !important;
+}
+.feelingThermometer .MuiSlider-track {
+  opacity: 0;
+}
+.feelingThermometer span.active {
+  font-weight: bold;
+}
+
+
+/* Fix textarea border */
+textarea:focus {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Fix unclickable radio button */
+:root {
+  --Radio-actionRadius: 0
+}
+[type=radio] {
+  border-radius: var(--Radio-actionRadius);
+}
+
+
+/* Fix chat thing */
+
+.cs-main-container {
+  flex-wrap: wrap;
+}
+.msgSend {
+  flex-grow: 1;
+  width: 100%;
+  order: 2;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  background: #fff;
+  padding: 1rem 0 0 0;
+}
+
+.msgSend input {
+  border-radius: 1rem;
+  border: none !important;
+  background-color: #f5f5f5;
+  /* width: 20em; */
+  margin: 0 1rem 0 0;
+  flex-grow: 1;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.botMsg {
+  /* margin-top: 0em !important; */
+}
+.cs-message--incoming:not(.botMsg) + .botMsg {
+  margin-top: 1rem !important;
+}
+.botMsg .cs-message__content {
+  background-color: rgb(219, 219, 219);
+  color: #4a4a4a;
+  /* color: orange; */
+}
+.botIcon {
+  color: rgb(107, 100, 127);
+  opacity: 0.5;
+  font-size: 1.5em !important;
+}
+.botIcon:not(:first-child) {
+  margin-top: 0.5em !important;
+}
+
+/* Progress List */
+.progressList .MuiListItem-root {
+  opacity: 0.4;
+}
+.progressList .MuiListItem-root.active {
+  opacity: 0.95;
+}
+.progressList .MuiListItemDecorator-root {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #000;
+  margin-right: -0.5em;
+  opacity: 0.8;
+}
+.progressList .MuiListItemDecorator-root svg {
+  font-size: 2em;
+  transform: scaleX(0.7);
+  margin-left: -0.35em;
+  color: #000;
+}
+.progressList .MuiListItemContent-root {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.textRed {
+  color: red;
+}
+.cs-avatar {
+  opacity: 0.3;
+}
+
+/* Group Images */
+.sameGroup {
+  max-width: 75%;
+  margin: 0 auto;
+}
+
+/* Pots */
+
+.potContainer {
+  width: 12rem;
+  height: 20rem;
+  text-align: 'center';
+  /* border: solid 1px #ccc; */
+  display: block;
+  /* border-radius: 50%; */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  /* margin-right: -4rem; */
+  /* margin-left: -4rem; */
+  margin: 0;
+}
+.potContainer span {
+  position: absolute;
+  top: 2rem;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+.potContainer span.base_bonus {
+  position: initial;
+}

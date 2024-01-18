@@ -1,0 +1,42 @@
+@charset "utf-8";
+// Variables defined in
+// @chatscope/chat-ui-kit-styles/themes/default/_variables.scss
+
+$default-font-family: 'Poppins', serif;
+
+.cs-main-container {
+    border-radius: 1rem;
+}
+
+$chat-container-message-input-bg-color: #fff;
+$chat-container-message-input-border-top: none;
+// $message-input-content-editor-wrapper-margin: 1em;
+$message-input-padding: 1em !important;
+$message-input-content-editor-wrapper-bg-color: #f6f6f6;
+
+$color-primary: #ffffff;
+$color-primary-light: #ffffff;
+$color-primary-dark: #584FD1;
+
+$color-secondary: #91ECEC !default;
+$color-secondary-light: #C2F9F9 !default;
+$color-secondary-dark: #64D3D3 !default;
+$main-container-border: 0;
+
+$color-text: rgb(86, 86, 86);
+$typing-indicator-text-color: $color-text;
+$typing-indicator-dot-bg-color: $color-text;
+$message-content-outgoing-color: #fff !important;
+
+$message-list-typing-indicator-bg-color: transparent;
+.cs-typing-indicator {
+    padding: 1rem 0 1rem 1.5rem !important;
+}
+
+$default-bg-color: #f6f6f6;
+
+
+$message-list-scroll-wrapper-padding: 0.6em 1.2em 0 0.8em;
+
+
+@import "@chatscope/chat-ui-kit-styles/themes/default/main.scss";
