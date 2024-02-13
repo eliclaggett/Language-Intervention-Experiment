@@ -10,7 +10,7 @@ let dotEnvPath = null;
 if (fs.existsSync('/home/ubuntu/eli')) {
   dotEnvPath = findConfig('.env', {cwd: '/home/ubuntu/eli/empirica'});
 } else {
-  dotEnvPath = findConfig('.env', {cwd: '/Users/eclagget/Code/chat-cooperation'});
+  dotEnvPath = findConfig('.env', {cwd: '/Users/eclagget/Code/experiment/chat-cooperation'});
 }
 
 if (dotEnvPath) {
@@ -54,54 +54,8 @@ const gameParams = {
 
   participantCounter: 0
 };
-const botTexts = {
-  "customExamples": [
-    "David Campbell, a teacher in Orange Park, FL admitted to teaching inaccurate simplifications about evolution as long as he could convince religious students that evolution is real. What do you think about this story?",
-    "The parents of a Michigan gunman who killed four high school students in 2021 are now being tried for involuntary manslaughter because they purchased the weapon for their son. What do you think about this story?",
-    "Lockheed Martin, which has spent the past 20 years developing a new F-35 fighter jet, is projected to receive over 1.7 trillion dollars for aircraft that continue to malfunction and face delays. Some believe it will never be ready to fly. What are your reactions to hearing this?",
-    "People are outraged at the finding that public schools in New York City have spent over $200,000 doing drag queen story hours which have been suspected of “grooming” children. What are your reactions to recent stories like these?",
-    "In response to the U.S. government continuing to increase restrictions on fossil fuel use, former Energy Secretary Rick Perry has released a statement saying that these skyrocketing energy prices are \"killing America.\" What do you think?",
-    "Regarding the U.S'. response to the COVID-19 pandemic, Supreme Court Justice Neil Gorsuch said we \"experienced the greatest intrusions on civil liberties in the peacetime history of this country.\" Do you think COVID-19 restrictions went too far?",
-    "Representative Elise Stefanik has stated that the U.S. is \"sacrificing America's children's safety and happiness to prioritize the needs of illegals\" referring to the influx of migrants into New York City. Do you share this opinion?"
-  ],
-  "customExampleSources": [
-    "https://www.nytimes.com/2008/08/24/education/24evolution.html",
-    "https://www.nbcnews.com/news/us-news/oxford-michigan-school-shooters-parents-will-stand-trial-rcna76357",
-    "https://www.nytimes.com/2019/08/21/magazine/f35-joint-strike-fighter-program.html",
-    "https://www.ny1.com/nyc/all-boroughs/education/2022/06/16/queens-councilmember-calls-drag-queen-story-hours-in-schools--grooming-",
-    "https://www.foxnews.com/media/democrats-killing-america-rick-perry",
-    "https://www.foxnews.com/politics/gorsuch-gives-scathing-overview-covid-era-fear-desire-safety-powerful-forces",
-    "https://www.foxnews.com/politics/ny-house-republicans-blast-dems-states-migrant-crisis-packing-school-gyms-absolutely-unacceptable"
-  ],
-  "customPrompts": [
-    "Now, exchange your opinions on the way evolution should be taught in schools. Would you want your kids learning it?",
-    "Now, exchange your opinions on the degree that gun rights should be protected or abolished.",
-    "Now, exchange your opinions on how much the military should be funded. How much of your tax dollars would you be willing to provide?",
-    "Now, exchange your opinions on the inclusion of gay and transgender stories in public schools. How would you feel if your children had access to these?",
-    "Now, exchange your feelings about the severity of global warming.",
-    "Now, exchange your opinions on the way the COVID-19 pandemic was handled.",
-    "Now, discuss how you feel immigration affects society."
-  ],
-  "customFollowups": [
-    "Should teachers be punished for choosing to teach creationism as an alternative explanation?",
-    "What do you think decreasing access to guns will do to society?",
-    "Is there meaning to having the strongest military if it doesn't get involved in world conflicts?",
-    "Should teachers and books in public schools be banned from discussing sexuality and gender?",
-    "How much can economic prosperity be sacrificed to prevent climate change?",
-    "Do you think the CDC is a trustworthy source of information?",
-    "How would your opinions change if immigrants were given more social support services like food stamps and medicare?"
-  ],
-  'preEvalMessages': [
-    "Hey, how's it going?",
-    "I'm doing well myself. First of all, I think the fear around AI's capabilities is overblown.",
-    "Instead of being fearful, I actually think it's cool that AI can help edit photos and text to make them look better to us. What do you think?",
-    "Why do you feel that way?",
-    "I see. People are so afraid that AI has all these problems like replacing human jobs and creating unrealistic beauty standards but I think that's always been happening. Nothing new.",
-    "I do understand that the speed and scale of AI's effect on society is different than before. It's definitely messed up that you can't tell whether something is real or not.",
-    "It's especially bad that ChatGPT straight up lies to people sometimes.",
-    "Anyways, I'm hopeful we can figure out as a society how to fix AI's problems. It was nice chatting with you!"
-  ]
-};
+const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/texts.json'))
+botTexts['preEvalMessages'] = botTexts['messagesEvaluation'][2]
 
 const submittedOpinionSurvey = new Set();
 const preEvalTimers = {};
@@ -128,7 +82,7 @@ function startChatbotPrompting(game) {
     msgs.push({
       sender: -1,
       sentTime: 'just now',
-      txt: 'Welcome to the chat room! Please discuss your opinions about the following news story.'
+      txt: botTexts['welcomeMessage']
     });
 
     msgs.push({
