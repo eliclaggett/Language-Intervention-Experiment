@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react";
+import reactRefresh from "@vitejs/plugin-react-refresh";
 import { resolve } from "path";
 import { defineConfig, searchForWorkspaceRoot } from "vite";
 import restart from "vite-plugin-restart";
@@ -34,7 +34,7 @@ export default defineConfig({
       ],
     }),
     UnoCSS(),
-    react()
+    reactRefresh(),
   ],
   define: {
     "process.env": {
