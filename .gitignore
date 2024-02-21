@@ -8,3 +8,5 @@ node_modules
 nginx
 __pycache__
 package-lock.json
+*.tar.gz
+*.tar.zst
