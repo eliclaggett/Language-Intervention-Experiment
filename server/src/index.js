@@ -19,7 +19,7 @@ const argv = minimist(process.argv.slice(2), { string: ["token"] });
 let dotEnvPath = null;
 if (fs.existsSync('/home/ubuntu/eli')) {
   dotEnvPath = findConfig('.env', {cwd: '/home/ubuntu/eli/experiment'});
-} else {
+} else if (fs.existsSync('/Users/eclagget/Code/experiment')) {
   dotEnvPath = findConfig('.env', {cwd: '/Users/eclagget/Code/experiment/chat-cooperation'});
 }
 

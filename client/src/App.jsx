@@ -59,10 +59,6 @@ const theme = extendTheme({
   }
 });
 
-function connectToNLP() {
-  // TODO: Implement function
-}
-
 export default function App() {
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -80,13 +76,17 @@ export default function App() {
   console.log('URL');
   console.log(url);
 
+  const connectToNLP = () => {
+    // TODO: Implement
+  }
+
   // Setup connection with backend Python server for ML/NLP
   useEffect(() => {
     
     // The server uses an encrypted connection when not being tested locally
     const nlpServerURL = (window.location.protocol === 'http:') ?
-      'ws://' + window.location.hostname + ':' + '9099' :
-      'wss://' + window.location.hostname + ':' + '9099';
+      'ws://' + window.location.hostname + ':' + '9902':
+      'wss://' + window.location.hostname + '/' + '9902';
 
     // Set server protocol
     window.nlpServer = new WebSocket(nlpServerURL);
@@ -118,14 +118,15 @@ export default function App() {
   function onboardingSteps({ game, player }) {
     return [
 
-      // Test only
-      // PublicGoodsGame,
-      PreEvaluation,
+      // [Warning] Test only
+      Conversation,
 
+
+      // Real onboarding steps
       Recaptcha,
       ConsentForm,
       Tutorial,
-      // PreEvaluation,
+      // PreEvaluation, // No pre-evaluation
       OpinionSurvey,
     ];
   }

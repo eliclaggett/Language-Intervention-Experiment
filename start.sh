@@ -25,7 +25,6 @@
 #
 ################################################################################
 
-
 echo $$ > RUNNING_PID
 
 current_dir=$(pwd)
@@ -52,7 +51,7 @@ then
     pid1=$!
     echo "Empirica running with PID $pid1";
 else
-    { emp serve chat-cooperation.tar.zst -s ":${PORT_EMPIRICA}" --tajriba.store.file "${STORE_PATH}/tajriba-${dt}.json" > "$current_dir/log_empirica.log" 2>&1 & }
+    { emp serve "${EXPERIMENT_NAME}.tar.zst" -s ":${PORT_EMPIRICA}" --tajriba.store.file "${STORE_PATH}/tajriba-${dt}.json" > "$current_dir/log_empirica.log" 2>&1 & }
     pid1=$!
     echo "Empirica running with PID $pid1";
 fi

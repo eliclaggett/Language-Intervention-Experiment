@@ -5,18 +5,19 @@ cd "$parent_path"
 # Load dotenv
 export $(cat .env | xargs)
 
-# cd "../"
 empirica bundle
 
-# cd "../"
-echo $SERVER_SSH
+echo $SERVER_SSH;
+echo $SERVER_PATH;
 
 sftp -b - -i deployment/server.pem $SERVER_SSH <<EOF
-	put -r "$parent_path/chat-cooperation.tar.zst" /home/ubuntu/eli/experiment/
-	put "$parent_path/start.sh" /home/ubuntu/eli/experiment/start.sh
-	put "$parent_path/.env_prod" /home/ubuntu/eli/experiment/.env
-	put "$parent_path/texts.json" /home/ubuntu/eli/texts.json
-	put "$parent_path/nlp/nlp.py" /home/ubuntu/eli/experiment/nlp/nlp.py
-	put "/Users/eclagget/Code/update-empirica.sh" /home/ubuntu/eli/update_empirica.sh
+	put -r "$parent_path/$EXPERIMENT_NAME.tar.zst" "$SERVER_PATH"
+	put "$parent_path/start.sh" "$SERVER_PATH/start.sh"
+	put "$parent_path/.env_prod" "$SERVER_PATH/.env"
+	put "$parent_path/texts.json" "$SERVER_PATH/texts.json"
+	put "$parent_path/nlp/nlp.py" "$SERVER_PATH/nlp/nlp.py"
+	put "$parent_path/deployment/install_custom_empirica.sh" "$SERVER_PATH/../install_custom_empirica.sh"
 	exit
 EOF
+
+echo "Done deploying the experiment!";

@@ -8,8 +8,8 @@ import { makePairs } from "./pairing";
 
 let dotEnvPath = null;
 if (fs.existsSync('/home/ubuntu/eli')) {
-  dotEnvPath = findConfig('.env', {cwd: '/home/ubuntu/eli/empirica'});
-} else {
+  dotEnvPath = findConfig('.env', {cwd: '/home/ubuntu/eli/experiment'});
+} else if (fs.existsSync('/Users/eclagget/Code/experiment')) {
   dotEnvPath = findConfig('.env', {cwd: '/Users/eclagget/Code/experiment/chat-cooperation'});
 }
 
@@ -39,7 +39,7 @@ const gameParams = {
   defectionBonus: 2,
   cooperationBonus: 4,
   maxBonus: 4,
-  bonus: 2,
+  bonus: 3,
   
   samplingType: 'within',
 
@@ -47,14 +47,14 @@ const gameParams = {
   followupDelay1: 3,
   followupDelay2: 3,
 
-  cooperationDiscussionTime: 3,
+  cooperationDiscussionTime: 0,
   cooperationTime: 3,
   reflectionSurveyTime: 7,
   partnerAnswerTime: 2,
 
   participantCounter: 0
 };
-const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/texts.json'))
+const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/' + process.env['EXPERIMENT_NAME'] + '/texts.json'))
 botTexts['preEvalMessages'] = botTexts['messagesEvaluation'][2]
 
 const submittedOpinionSurvey = new Set();
@@ -105,7 +105,7 @@ function startChatbotPrompting(game) {
       } else if (currentMinute == gameParams['followupDelay1']+gameParams['followupDelay2']) {
         nextPrompt = botTexts['customFollowups'][topic];
       }
-      else if (currentMinute == gameParams.chatTime-1) {
+      else if (currentMinute == gameParams.chatTime-1 && gameParams.cooperationDiscussionTime > 0) {
       
         const cooperationDiscussionPrompts = ['Times up! Thank you for discussing your opinions.',
         'Now, you have a few minutes to discuss how to allocate your bonus.',

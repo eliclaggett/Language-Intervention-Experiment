@@ -12,19 +12,12 @@ import { PlaylistRemoveTwoTone, SmartToyOutlined } from '@mui/icons-material';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 
-// import "react-chat-elements/dist/main.css";
-// import { MessageBox } from "react-chat-elements";
-
-// import styles from '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
 import '../chat.scss';
 import { Avatar, MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
 import { State } from '@empirica/tajriba';
 
-import { Hint } from 'react-autocomplete-hint';
-// import * as Test from '../utils/react-autocomplete-hint/dist/src/index.js';
-
-// import { Chat } from "@empirica/chat";
-
+// import { Hint } from 'react-autocomplete-hint';
+import { Hint } from'../utils/react-autocomplete-hint/dist/src/index.js'; // Use custom hint to show autocomplete suggestions as soon as they are generated
 
 // TODO: Remove next?
 export default function Conversation({next}) {
@@ -51,8 +44,14 @@ export default function Conversation({next}) {
 
     // Empirica message state
     const chatChannel = player.get('chatChannel');
-    const typingChannel = player.get('typingChannel');
-    let messages = game.get(chatChannel) || [];
+    const typingChannel = player.get('typingChannel') || '';
+    let messages = game.get(chatChannel) || [
+        {
+            txt: 'Hi there! I\'m happy to chat with you about this topic.',
+            sender: -999,
+            dt: (new Date()).toISOString()
+        }
+    ];
     let pairTypingStatus = game.get(typingChannel) || [false, false];
     
     // The typing channel is an attribute of the game that allows participants to see when their partner types and vice versa
@@ -80,6 +79,9 @@ export default function Conversation({next}) {
     // Setup communication with Python server
     useEffect(() => {
 
+        // TEST-ONLY
+        setAutocompleteOptions(['Hi there! I\'m happy to chat with you about this topic'])
+
         // Handle receiving a message from the server
         window.nlpServer.onmessage = (msg) => {
 
@@ -94,7 +96,7 @@ export default function Conversation({next}) {
             if (re.lastIndex > 0) completion = completion.substring(0, re.lastIndex);
 
             // Store autocompleted text
-            setAutocompleteOptions([completion]);
+            // setAutocompleteOptions([completion]);
           };
 
         // Send a message to the server if the user has stopped typing for a couple seconds
@@ -135,11 +137,17 @@ export default function Conversation({next}) {
                 }
 
                 let avatar = '';
+                let msgClass = '';
                 if (msg.sender == -1) {
                     avatar = <Avatar src='images/smart_toy.svg' size='sm' />;
+                    msgClass = 'botMsg';
+                }
+                if (msg.sender == -999) {
+                    senderTxt = "🤖";
+                    msgClass = 'treatmentMsg';
                 }
 
-                uiElems.push(<Message className={msg.sender == -1 ? 'botMsg' : ''} model={{
+                uiElems.push(<Message className={msgClass} model={{
                     message: msg.txt,
                     sentTime: "just now",
                     sender: 'p'+msg.sender,
@@ -262,11 +270,19 @@ export default function Conversation({next}) {
             </ChatContainer>
             <div className='msgSend'>
                 <Hint options={autocompleteOptions} allowTabFill={true} onFill={handleAutocompleteFill}>
-                    <input type="text" placeholder="Type message here" value={text} onChange={handleChange} onKeyDown={handleKeyDown}/>
+                    <input type="text" placeholder="Hi there! I'm happy to chat with you about this topic." value={text} onChange={handleChange} onKeyDown={handleKeyDown}/>
                 </Hint>
                 <IconButton variant="plain" onClick={handleSend}>
                     <SendRoundedIcon />
                 </IconButton>
+            </div>
+            <div className='msgSend treatment'>
+                <span>Suggestion (click to copy)</span>
+                <div className="input-wrapper">
+                    <textarea value={autocompleteOptions[0]}></textarea>
+                </div>
+                <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+                
             </div>
         </MainContainer>
         {skipButtonUI}

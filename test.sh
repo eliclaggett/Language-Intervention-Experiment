@@ -11,7 +11,7 @@ if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -
 
 
 # Remove Empirica cache
-# rm .empirica/local/tajriba.json
+rm .empirica/local/tajriba.json
 
 # Run Empirica
 { $(go env GOPATH)/bin/emp -s ":${PORT_EMPIRICA}" & }

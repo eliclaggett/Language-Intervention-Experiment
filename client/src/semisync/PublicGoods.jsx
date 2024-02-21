@@ -17,7 +17,8 @@ import {
   } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { ChartsTooltip } from '@mui/x-charts';
-import { Button, Box, Container, FormControl, FormLabel, Grid, Typography, Stack, FormHelperText, List, ListItem, Radio, RadioGroup, Slider, Textarea } from '@mui/joy';
+import WarningIcon from '@mui/icons-material/Warning';
+import { Alert, Button, Box, Container, FormControl, FormLabel, Grid, Typography, Stack, FormHelperText, List, ListItem, Radio, RadioGroup, Slider, Textarea } from '@mui/joy';
 import { useState } from 'react';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
@@ -35,6 +36,9 @@ export default function PublicGoodsGame({next}) {
     
     const [shareType, setShareType] = useState('Share');
     const [shareAmt, setShareAmt] = useState(0);
+    
+    const riskDisplayClass = shareAmt > 0.5 ? '' : 'hidden';
+    const minBonus = 1.0 - shareAmt;
     
     const [radioButtonVals, setRadioButtonVals] = useState();
     const [preventClick, setPreventClick] = useState(false);
@@ -84,6 +88,7 @@ export default function PublicGoodsGame({next}) {
         // Legend
       );
 
+    const maxShareAmt = 1.0;
 
     const options = {
         responsive: true,
@@ -101,7 +106,7 @@ export default function PublicGoodsGame({next}) {
             },
             y: {
             min: 0,
-            max: gameParams.bonus * 2,
+            max: ( gameParams.bonus - maxShareAmt )* 2,
             grid: {
                 display: false
             }
@@ -110,30 +115,36 @@ export default function PublicGoodsGame({next}) {
         aspectRatio: 1,
     };
   
-    const labels = [['Default', formatMoney(gameParams.bonus)], ['Current',formatMoney(gameParams.bonus - shareAmt)]];
+
+    const defaultPlayer = 1.0;
+    const defaultPartner = 2.0;
+    const currentPlayer = defaultPlayer - shareAmt;
+    let currentPartner = defaultPartner;
+    if (shareType == 'Share')   currentPartner += shareAmt*2;
+    else                        currentPartner -= shareAmt*2;
+
+
+    const labels = [['Default', formatMoney(defaultPlayer)], ['Current',formatMoney(currentPlayer)]];
   
     const data = {
         labels,
         datasets: [
         {
             label: '',
-            data: [gameParams.bonus,gameParams.bonus-shareAmt],
+            data: [defaultPlayer,currentPlayer],
             backgroundColor: ['rgba(50, 50, 50, 0.2)','rgb(37, 99, 235)'],
         }
         ],
     };
-
-    let partnerBonus = gameParams.bonus;
-    if (shareType == 'Share')   partnerBonus += shareAmt*2;
-    else                        partnerBonus -= shareAmt*2;
     
-    const partnerLabels = [['Default', formatMoney(gameParams.bonus)], ['Current',formatMoney(partnerBonus)]];
+    
+    const partnerLabels = [['Default', formatMoney(defaultPartner)], ['Current',formatMoney(currentPartner)]];
     const partnerData = {
         labels: partnerLabels,
         datasets: [
         {
             label: 'Partner',
-            data: [gameParams.bonus, partnerBonus],
+            data: [defaultPartner, currentPartner],
             backgroundColor: ['rgba(50, 50, 50, 0.2)','rgb(37, 99, 235)'],
         }
         ],
@@ -171,32 +182,22 @@ export default function PublicGoodsGame({next}) {
 
                 <Grid container columns={2} columnGap={8} justifyContent="center" alignItems="center">
                     <div className="potContainer">
-                        <span>Effect on your bonus</span>
-                        {/* <BarChart
-                            xAxis={[{ scaleType: 'band', data: ['group A', 'group B', 'group C'] }]}
-                            series={[{ data: [4, 3, 5] }, { data: [1, 6, 3] }, { data: [2, 5, 6] }]}
-                            width={500}
-                            height={300}
-                        /> */}
+                        <span>Effect on your<br />minimum bonus</span>
                         <Bar options={options} data={data}/>
-                        {/* <span className='base_bonus'>$2.00</span> */}
-                        {/* <Typography level="h1">-{formatMoney(shareAmt)}</Typography> */}
-                        {/* <Typography level="body-md">Keep</Typography> */}
                     </div>                
                     <div className="potContainer">
-                        <span>Effect on partner's bonus</span>
-                        {/* <span className='base_bonus'>$2.00</span> */}
-                        {/* <BarChart
-                            xAxis={[{ scaleType: 'band', data: ['Default', 'Modified'] }]}
-                            series={[{data: [2,2]}]}
-                            width={300}
-                            height={300}
-                        /> */}
+                        <span>Effect on partner's<br />minimum bonus</span>
                         <Bar options={options} data={partnerData} />
-                        {/* <Typography level="h1">{(shareType == 'Share' ? '+' : '-') + formatMoney(shareAmt*2)}</Typography> */}
-                        {/* <Typography level="body-md">{shareType}</Typography> */}
                     </div>
                 </Grid>
+                <Alert startDecorator={<WarningIcon/>} title="Risk" color="warning" className={riskDisplayClass} sx={{my: 3}}>
+                    <div>
+                        <div><strong>High Allocation Risk</strong></div>
+                        <Typography level="body-sm" color="warning">
+                            Your bonus could decrease to <strong>{formatMoney(minBonus)}</strong> depending on your partner's allocation decision.
+                        </Typography>
+                    </div>
+                </Alert>
                 <Typography level="body-md">Would you like to share or take away?</Typography>
                 <RadioGroup aria-label="Share type" name="shareType" defaultValue="Share" onChange={(e)=>setShareType(e.target.value)}>
                         <List
@@ -235,7 +236,7 @@ export default function PublicGoodsGame({next}) {
                 <Slider 
                 
                 style={{width: '20rem', mx: 'auto'}}
-                defaultValue={0} min={0} max={1} step={0.1} onChange={(e)=>setShareAmt(e.target.value)}/>
+                defaultValue={0} min={0} max={maxShareAmt} step={0.1} onChange={(e)=>setShareAmt(e.target.value)}/>
 
 
                 <Typography level='body-md' textAlign={'center'}>To help us understand your decision, it would be great if you could answer the following questions.</Typography>

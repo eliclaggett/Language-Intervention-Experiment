@@ -13,7 +13,7 @@ load_dotenv(find_dotenv())
 
 # Initialize variables
 SERVER_URL = os.getenv('SERVER_URL') # e.g. "example.com"
-NLP_PORT = os.getenv('PORT_PYTHON') # e.g. 9090
+NLP_PORT = os.getenv('PORT_PYTHON') # e.g. 9902
 connected = set()
 
 # Initialize language generation pipeline (AI model)
