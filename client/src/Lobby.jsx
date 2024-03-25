@@ -110,7 +110,7 @@ export default function Lobby() {
                     flex: 0,
                     width: '10rem',
                     mx: 'auto',
-                    mb: '2rem'}}>Report Partner</Button>
+                    mb: '2rem'}}>Report Language</Button>
             </Stack>
         </Container>
         );

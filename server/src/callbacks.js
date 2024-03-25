@@ -32,17 +32,19 @@ const completionCodes = {
 };
 
 const gameParams = {
-  version: 'November 2023',
+  version: 'March 2024',
   
+  // Payouts
   task1Pay: 3,
-  task2Pay: 2,
-  defectionBonus: 2,
-  cooperationBonus: 4,
-  maxBonus: 4,
-  bonus: 3,
+  task2Pay: 3,
+  bonus: 2,
+  maxBonusShare: 2, // Used in consent form, tutorial, and economic game to calculate bonus range
+  shareMultiplier: 2,
   
-  samplingType: 'within',
+  // Experiment parameters
+  samplingType: 'within', // within, between (passed pre-eval or not)
 
+  // Timing
   chatTime: 10,
   followupDelay1: 3,
   followupDelay2: 3,
@@ -52,6 +54,7 @@ const gameParams = {
   reflectionSurveyTime: 7,
   partnerAnswerTime: 2,
 
+  // Misc. global variables
   participantCounter: 0
 };
 const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/' + process.env['EXPERIMENT_NAME'] + '/texts.json'))
@@ -437,6 +440,24 @@ Empirica.on('player', 'processGameEnd', (ctx, {player, processGameEnd}) => {
   const partnerCooperationDecision = player.get('partnerCooperationDecision') || -1;
   if (partnerCooperationDecision < 0) {
     // player.set('partnerCooperationDecision', 0);
+  }
+
+});
+
+Empirica.on("game", 'reportPartner', (ctx, { game, reportPartner }) => {
+  // Start a timer when the first person finishes onboarding
+  console.log(reportPartner);
+  const p = game.players.filter((p) => p.id == reportPartner.victim)[0];
+  const partner = game.players.filter((p) => p.id == gamePairs[reportPartner.victim])[0];
+  if (p) {
+    p.set('end', true);
+    p.set('endReason', 'reportPartner');
+    p.exit('reportPartner');
+  }
+  if (partner) {
+    partner.set('end', true);
+    partner.set('endReason', 'reported');
+    partner.exit('reported');
   }
 
 });

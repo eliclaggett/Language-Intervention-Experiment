@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { usePlayer } from "@empirica/core/player/classic/react";
-import Cooperate from "./semisync/Cooperation.jsx";
+
 import ReflectionSurvey from "./semisync/ReflectionSurvey.jsx";
 import PartnerAnswer from "./semisync/PartnerAnswer.jsx";
 import End from "./semisync/End.jsx";

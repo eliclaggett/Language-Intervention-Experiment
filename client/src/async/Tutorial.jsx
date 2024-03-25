@@ -21,7 +21,7 @@ export default function Tutorial({ next }) {
     if (!gameParams) window.location.reload();
     const correctAnswers = [1, 2, 2, 3];
     const totalBasePay = gameParams.task1Pay + gameParams.task2Pay;
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(4);
     const [nextButtonDisabled, setNextButtonDisabled] = useState(false);
     const [backButtonDisabled, setBackButtonDisabled] = useState(true);
     const [errorDisplay, setErrorDisplay] = useState('none');
@@ -44,18 +44,12 @@ export default function Tutorial({ next }) {
         [1, "Similar opinions to me"],
         [2, "Different opinions from me"]
     ];
-    // const q4Answers = [
-    //     [1, formatMoney(gameParams.task1Pay)],
-    //     [2, formatMoney(gameParams.task2Pay)],
-    //     [3, formatMoney(totalBasePay + gameParams.cooperationBonus)],
-    //     [4, formatMoney(totalBasePay + gameParams.defectionBonus)]
-    // ];
 
     const q4Answers = [
-        [1, formatMoney(gameParams.task1Pay)],
-        [2, formatMoney(gameParams.task2Pay)],
-        [3, formatMoney(totalBasePay + gameParams.bonus + 1)],
-        [4, formatMoney(totalBasePay + gameParams.bonus)]
+        [1, formatMoney(gameParams.bonus)],
+        [2, formatMoney(0)],
+        [3, formatMoney(gameParams.bonus+1)], // Correct
+        [4, formatMoney(gameParams.bonus-1)]
     ];
 
     const [q2RadioButtons, setQ2RadioButtons] = useState([]);
@@ -63,20 +57,27 @@ export default function Tutorial({ next }) {
     const [q4RadioButtons, setQ4RadioButtons] = useState([]);
     
     useEffect(() => {
+        const tmpQ2RadioButtons = [];
+        const tmpQ3RadioButtons = [];
+        const tmpQ4RadioButtons = [];
+
         shuffleArray(q2Answers);
         for (const q of q2Answers) {
-            q2RadioButtons.push(<Radio value={q[0]} label={q[1]} variant="outlined" key={"q2-"+q[0]}/>);
+            tmpQ2RadioButtons.push(<Radio value={q[0]} label={q[1]} variant="outlined" key={"q2-"+q[0]}/>);
         }
 
         shuffleArray(q3Answers);
         for (const q of q3Answers) {
-            q3RadioButtons.push(<Radio value={q[0]} label={q[1]} key={"q3-"+q[0]} variant="outlined" />);
+            tmpQ3RadioButtons.push(<Radio value={q[0]} label={q[1]} key={"q3-"+q[0]} variant="outlined" />);
         }  
         
         shuffleArray(q4Answers);
         for (const q of q4Answers) {
-            q4RadioButtons.push(<Radio value={q[0]} label={q[1]} key={"q4-"+q[0]} variant="outlined" />);
-        }  
+            tmpQ4RadioButtons.push(<Radio value={q[0]} label={q[1]} key={"q4-"+q[0]} variant="outlined" />);
+        } 
+        setQ2RadioButtons(tmpQ2RadioButtons);
+        setQ3RadioButtons(tmpQ3RadioButtons);
+        setQ4RadioButtons(tmpQ4RadioButtons);
     }, []);
     
 
@@ -199,21 +200,28 @@ export default function Tutorial({ next }) {
                             <img src='/images/undraw_forms_re_pkrt.svg' />
                             <Typography level="h2" textAlign="center">How we'll make pairs</Typography>
                             <Typography level="body-md">
-                                Using the results of the survey you will take shortly, we will group
-                                participants based on their beliefs. People in different groups will have different beliefs. People in the same
-                                group will have similar beliefs. After creating groups, we'll form some pairs within
-                                each group and some pairs between groups. After you are assigned a
-                                partner, you will have {gameParams.chatTime} minutes to discuss your
-                                thoughts.
+
+                                After the initial survey of your opinions, we create multiple groups of participants based on the results.
+                                Everyone in your group will share the the same opinions as you.
+                                
+                                Once these groups are created, we randomly form pairs either within or across groups:
+
+                            </Typography>
+                            <ul style={{ listStyle: 'disc', margin: '0.5em 0', padding: '0 1.5em'}}>
+                                <li>If you are paired within your group, your partner will share your opinions</li>
+                                <li>If you are paired across groups, your partner will have an opposing view</li>
+                            </ul>
+                            <Typography level="body-md">
+                                Then, you will have {gameParams.chatTime} minutes to discuss your opinions with your assigned partner.
                             </Typography>
                             <FormControl>
-                                <FormLabel>If my partner is from a different group, they likely have...</FormLabel>
+                                <FormLabel>If my partner is from a different group, they will have...</FormLabel>
                                 <RadioGroup name="q3" onChange={handleRadioButtonChange} defaultValue=''>
                                     {q3RadioButtons}
                                 </RadioGroup>
                             </FormControl>
                             <Typography level="body-md">
-                                The survey consists of seven statements which you will react to using
+                                The initial survey consists of seven statements which you will react to using
                                 the buttons below each statement. Please answer each question carefully
                                 because the next steps of the task will depend on your previous answers.
                                 You may click anywhere on the option you like best to select it:
@@ -259,60 +267,28 @@ export default function Tutorial({ next }) {
                             </Typography>
                         </Stack>;
     } else if (step == 4) {
-        // tutorialStepUI = <Stack gap={1}>
-        //                     <img src="/images/undraw_treasure_of-9-i.svg" />
-        //                     <Typography level="h2" textAlign="center">Bonus Payment</Typography>
-        //                     <Typography level="body-md">
-        //                     If you complete both Part 1 and Part 2 of this study, you are guaranteed to make at least {formatMoney(totalBasePay)}.
-        //                     In addition, you will have {gameParams.cooperationDiscussionTime} minutes to decide on which bonus option to choose:
-        //                     </Typography>
-        //                     <Typography level="h3">Default Bonus</Typography>
-        //                     <Typography level="body-md">
-        //                     The default study bonus is {formatMoney(gameParams.defectionBonus)}.
-        //                     </Typography>
-        //                     <Typography level="h3">Extra Bonus</Typography>
-        //                     <Typography level="body-md">
-        //                     If you and your partner agree to select the extra bonus option, your
-        //                     bonus will be {formatMoney(gameParams.cooperationBonus)}.
-        //                     However, if you select this option and your partner does not, you will receive no bonus.
-        //                     </Typography>
-        //                     <FormControl>
-        //                         <FormLabel>What is the total pay of this study if you and your partner select the
-        //                         extra bonus?</FormLabel>
-        //                         <RadioGroup name="q4" onChange={handleRadioButtonChange} defaultValue={radioButtonVals?.q4}>
-        //                             {q4RadioButtons}
-        //                         </RadioGroup>
-        //                     </FormControl>
-        //                 </Stack>;
         tutorialStepUI = <Stack gap={1}>
                             <img src="/images/undraw_treasure_of-9-i.svg" />
                             <Typography level="h2" textAlign="center">Bonus Payment</Typography>
                             <Typography level="body-md">
-                            If you complete both Part 1 and Part 2 of this study, you are guaranteed to make at least {formatMoney(totalBasePay)}.
-                            In addition, you will have {gameParams.cooperationDiscussionTime} minutes to decide how to allocate an additional bonus:
+                                After you complete both Part 1 and Part 2 of this study, you are guaranteed a base payment of {formatMoney(totalBasePay)}.
+                                In addition, you will earn a bonus of {formatMoney(gameParams.bonus)} that you may keep or share with your partner.
                             </Typography>
-                            <Typography level="h3" sx={{pt: 2}}>Default Bonus</Typography>
+                            <Typography level="h3" sx={{pt: 2}}>Bonus</Typography>
                             <Typography level="body-md">
-                            The default study bonus is {formatMoney(gameParams.bonus)}.
+                            You may choose to keep the default study bonus of {formatMoney(gameParams.bonus)}.
                             </Typography>
-                            <Typography level="h3" sx={{pt: 2}}>Share</Typography>
+                            <Typography level="h3" sx={{pt: 2}}>Bonus Sharing (optional)</Typography>
                             <Typography level="body-md">
-                            You may share up to $1 of your bonus with your partner.
+                            You may share up to {formatMoney(gameParams.maxBonusShare)} of your bonus with your partner.
                             <br/>
-                            They will receive 2x the amount you share.
+                            They will receive {gameParams.shareMultiplier}x the amount you share.
                             <br/>
-                            For example, if you share $0.50 with your partner, your bonus will decrease by $0.50 and their bonus will increase by $1.
+                            For example, if you share $0.50 with your partner, your bonus will decrease by $0.50 and their bonus will increase by {formatMoney(0.5*gameParams.shareMultiplier)}.
                             </Typography>
-                            <Typography level="h3" sx={{pt: 2}}>Take</Typography>
-                            <Typography level="body-md">
-                            You spend up to $1 to decrease the bonus of your partner.
-                            <br/>
-                            Their bonus will decrease by 2x the amount you spend.
-                            <br/>
-                            For example, if you spend $0.50 to take from their bonus, your bonus will decrease by $0.50 and their bonus will decrease by $1.
-                            </Typography>
+                            
                             <FormControl sx={{pt: 2}}>
-                                <FormLabel>What is the total pay of this study if you and your partner share $1 with each other?</FormLabel>
+                                <FormLabel>What is your final bonus if both you and your partner share $1.00 with each other?</FormLabel>
                                 <RadioGroup name="q4" onChange={handleRadioButtonChange} defaultValue=''>
                                     {q4RadioButtons}
                                 </RadioGroup>
@@ -358,7 +334,7 @@ export default function Tutorial({ next }) {
                         color="success"
                         sx={{ display: q4SuccessDisplay }}
                     >
-                        Exactly! {formatMoney(totalBasePay)} + $1 (your remaining bonus) + $2 (double what your partner shared).
+                        Exactly! {formatMoney(gameParams.bonus)} - {formatMoney(1)} (the amount you shared) + {formatMoney(2)} ({gameParams.shareMultiplier}x what your partner shared).
                 </Alert>
                 <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}>
                     <Button sx={{ my: 2, mr:1 }} onClick={handleBack} disabled={backButtonDisabled}>Back</Button>

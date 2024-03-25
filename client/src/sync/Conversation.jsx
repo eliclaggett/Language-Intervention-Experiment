@@ -16,42 +16,50 @@ import '../chat.scss';
 import { Avatar, MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
 import { State } from '@empirica/tajriba';
 
+import WithinGroupGraphic from '../components/WithinGroupGraphic.jsx';
+import AcrossGroupGraphic from '../components/AcrossGroupGraphic.jsx';
+
 // import { Hint } from 'react-autocomplete-hint';
 import { Hint } from'../utils/react-autocomplete-hint/dist/src/index.js'; // Use custom hint to show autocomplete suggestions as soon as they are generated
+// import { clearInterval } from 'timers';
+import TimerMixin from 'react-timer-mixin';
 
 // TODO: Remove next?
 export default function Conversation({next}) {
 
+    // const timerMixin = TimerMixin();
     const player = usePlayer();
     const playerId = player.get('id');
     const gameParams = player.get('gameParams');
     const playerGroup = player.get('group');
     const partnerGroup = player.get('partnerGroup');
     const acknowledgedGroup = player.get('acknowledgeGroup') || false;
+
+
+    const topic = player.get('topic');
+    const opinionSurveyResponses = player.get('submitOpinionSurvey');
+    const opinionStrength = opinionSurveyResponses[topic]
+
     const game = useGame();
     const stageTimer = useStageTimer();
 
     const [step, setStep] = useState(1);
     const [text, setText] = useState('');
-    const [autocompleteOptions, setAutocompleteOptions] = useState([]);
+    const [autocompleteOptions, setAutocompleteOptions] = useState(['']);
     const [radioButtonVals, setRadioButtonVals] = useState();
     const [preventClick, setPreventClick] = useState(false);
     const [currentValue, setCurrentValue] = useState('');
     const [isTyping, setIsTyping] = React.useState(false);
     const [typingIndicator, setTypingIndicator] = React.useState(null);
+    const [reportPartnerText, setReportPartnerText] = useState('Report Language');
+    const [reportPartnerStatus, setReportPartnerStatus] = useState(false);
     // const [debouncedIsTyping, setDebouncedIsTyping] = React.useState(false);
 
 
     // Empirica message state
     const chatChannel = player.get('chatChannel');
     const typingChannel = player.get('typingChannel') || '';
-    let messages = game.get(chatChannel) || [
-        {
-            txt: 'Hi there! I\'m happy to chat with you about this topic.',
-            sender: -999,
-            dt: (new Date()).toISOString()
-        }
-    ];
+    const messages = game.get(chatChannel);
     let pairTypingStatus = game.get(typingChannel) || [false, false];
     
     // The typing channel is an attribute of the game that allows participants to see when their partner types and vice versa
@@ -79,24 +87,31 @@ export default function Conversation({next}) {
     // Setup communication with Python server
     useEffect(() => {
 
+        window.autocompletion = undefined;
         // TEST-ONLY
-        setAutocompleteOptions(['Hi there! I\'m happy to chat with you about this topic'])
+        // setAutocompleteOptions(['Hi there! I\'m happy to chat with you about this topic'])
 
         // Handle receiving a message from the server
         window.nlpServer.onmessage = (msg) => {
 
             const data = JSON.parse(msg.data);
             
+            let currentAutocompletion = typeof(window.autocompletion) === 'undefined' ?  '' : window.autocompletion;
+
             // Get autocompleted text
-            let completion = data.completion;
+            let partial_reply = data.partial_reply;
             
             // Remove any generated text that starts a new sentence. (Only complete the current sentence)
-            const re = new RegExp( "[\.|\!|\?]", "g" );
-            re.test(completion);
-            if (re.lastIndex > 0) completion = completion.substring(0, re.lastIndex);
+            // const re = new RegExp( "[\.|\!|\?]", "g" );
+            // re.test(completion);
+            // if (re.lastIndex > 0) completion = completion.substring(0, re.lastIndex);
 
             // Store autocompleted text
-            // setAutocompleteOptions([completion]);
+            currentAutocompletion += partial_reply;
+
+            window.autocompletion = currentAutocompletion;
+
+            setAutocompleteOptions([currentAutocompletion]);
           };
 
         // Send a message to the server if the user has stopped typing for a couple seconds
@@ -106,10 +121,14 @@ export default function Conversation({next}) {
             game.set(typingChannel, updateTypingStatus(participantIdx, false));
 
             // Send a message to the Python server asking for an autocompletion
-            window.nlpServer.send(JSON.stringify({
-                command: 'autocomplete',
-                incomplete_msg: valueRef.current
-            }));
+            if (window.autocompletion === undefined) {
+                window.autocompletion = '';
+                window.nlpServer.send(JSON.stringify({
+                    command: 'autocomplete',
+                    pairId: player.id,
+                    incomplete_msg: valueRef.current
+                }));
+            }
 
         }, 5 * 1000);
 
@@ -123,6 +142,14 @@ export default function Conversation({next}) {
 
             let firstFromSender = true;
             let lastSender = -1;
+
+            if (messages.length == 2) {
+                window.nlpServer.send(JSON.stringify({
+                    command: 'initialize_history',
+                    pairId: player.id,
+                    history: [messages[0].txt, messages[1].txt]
+                }));
+            }
 
             for (const msg of messages) {
                 
@@ -212,8 +239,40 @@ export default function Conversation({next}) {
         player.set('acceptSuggestion', [...player.get('acceptSuggestion'), val])
     }
 
+    let reportPartnerInterval = null;
+    const handleReportPartner = () => {
+        if (reportPartnerStatus) {
+            setReportPartnerText('Report Language');
+            setReportPartnerStatus(false);
+            window.reportPartnerTimer = 0;
+            TimerMixin.clearInterval(reportPartnerInterval);
+
+            game.set('reportPartner', {victim: player.id});
+        } else {
+            setReportPartnerStatus(true);
+            setReportPartnerText('Confirm (5s)');
+            window.reportPartnerTimer = 4;
+            reportPartnerInterval = TimerMixin.setInterval(() => {
+                if (window.reportPartnerTimer <= 0) {
+                    setReportPartnerText('Report Language');
+                    setReportPartnerStatus(false);
+                    TimerMixin.clearInterval(reportPartnerInterval);
+                } else {
+                    setReportPartnerText('Confirm ('+window.reportPartnerTimer+'s)');
+                    window.reportPartnerTimer--;
+                }
+            }, 1000);
+        }
+    }
+
+    const handleSuggestionClick = () => {
+        setText(autocompleteOptions[0]);
+    }
 
     const groupTxt = playerGroup == partnerGroup ? 'the same' : 'a different';
+    const groupGraphic = playerGroup == partnerGroup ? 
+    <WithinGroupGraphic topic={topic} opinionDirection={opinionStrength} />
+    : <AcrossGroupGraphic topic={topic} opinionDirection={opinionStrength} />;
     const groupImg = playerGroup == partnerGroup
         ? <img src="images/shake0.png" id="groupTypeIcon" className="sameGroup"/>
         : <img src="images/vs0.png" id="groupTypeIcon" />;
@@ -228,13 +287,12 @@ export default function Conversation({next}) {
         textAlign: 'center'
     }} gap={1}>
         <Typography level="body-md">
-            We finished assigning group labels and making pairs based on your questionnaire
-            answers. People in the same group are likely to have shared values.
+            We finished grouping like-minded participants and assigning conversation partners.
         </Typography>
         <Typography level="h1">
             Your partner is from {groupTxt} group.
         </Typography>
-        {groupImg}
+        {groupGraphic}
         <Typography level="body-md">
             Next, you will chat with your partner about an assigned topic.
         </Typography>
@@ -244,6 +302,16 @@ export default function Conversation({next}) {
     const skipButtonUI = window.location.hostname == 'localhost'
         ? <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}><Button sx={{ my: 2 }} onClick={handleButtonClick}>(Development Only) Skip</Button></Box>
         : '';
+
+    const suggestionClass = autocompleteOptions[0].length > 0 ? 'msgSend treatment' : 'msgSend treatment hidden';
+    const autocompleteUI = <div className={suggestionClass}>
+        <span>Suggestion (click to copy)</span>
+        <div className="input-wrapper">
+            {/* <textarea value={autocompleteOptions[0]}></textarea> */}
+            <div onClick={handleSuggestionClick}>{autocompleteOptions[0]}</div>
+        </div>
+        <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+    </div>;
 
     const chatUI = <Stack sx={{
         maxWidth: {
@@ -270,22 +338,21 @@ export default function Conversation({next}) {
             </ChatContainer>
             <div className='msgSend'>
                 <Hint options={autocompleteOptions} allowTabFill={true} onFill={handleAutocompleteFill}>
-                    <input type="text" placeholder="Hi there! I'm happy to chat with you about this topic." value={text} onChange={handleChange} onKeyDown={handleKeyDown}/>
+                    <input type="text" placeholder="Type a message here" value={text} onChange={handleChange} onKeyDown={handleKeyDown}/>
                 </Hint>
                 <IconButton variant="plain" onClick={handleSend}>
                     <SendRoundedIcon />
                 </IconButton>
             </div>
-            <div className='msgSend treatment'>
-                <span>Suggestion (click to copy)</span>
-                <div className="input-wrapper">
-                    <textarea value={autocompleteOptions[0]}></textarea>
-                </div>
-                <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
-                
-            </div>
+            {autocompleteUI}
         </MainContainer>
         {skipButtonUI}
+        <Button variant='outlined' color="danger" onClick={handleReportPartner} sx={{
+            flex: 0,
+            width: '10rem',
+            mx: 'auto',
+            mb: '2rem'}}
+        >{reportPartnerText}</Button>
     </Stack>;
 
     const ui = acknowledgedGroup ? chatUI : acknowledgeGroupUI;

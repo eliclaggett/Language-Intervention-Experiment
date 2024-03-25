@@ -46,7 +46,7 @@ export default function ReflectionSurvey({ next }) {
         topic = parseInt(topic.substring(1));
     }
 
-    const followupQuestion = topic >= 0 ? followups[topic] : 'N/A';
+    const followupQuestion = topic >= 0 ? followups[topic-1] : 'N/A';
 
     const [step, setStep] = useState(1);
     const [radioButtonVals, setRadioButtonVals] = useState();

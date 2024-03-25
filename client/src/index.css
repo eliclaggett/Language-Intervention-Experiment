@@ -93,7 +93,7 @@ textarea:focus {
   border-radius: 1rem;
   border: none !important;
   background-color: #f5f5f5;
-  /* width: 20em; */
+  width: 20em;
   margin: 0 1rem 0 0;
   flex-grow: 1;
   outline: none !important;
@@ -122,8 +122,12 @@ textarea:focus {
 
 .msgSend.treatment {
   flex-wrap: wrap;
+  align-items: baseline;
 }
-.msgSend.treatment textarea {
+.msgSend.treatment.hidden {
+  opacity: 0.1;
+}
+.msgSend.treatment textarea, .msgSend.treatment .input-wrapper div {
   width: 342px;
   flex-grow: 0;
   background-color: rgb(206, 253, 211);
@@ -138,6 +142,10 @@ textarea:focus {
   outline: none !important;
   box-shadow: none !important;
   resize: none;
+}
+.msgSend.treatment .input-wrapper div {
+  padding: 0.5em 1em;
+  user-select: none;
 }
 .treatmentMsg .cs-message__content {
   background-color: rgb(206, 253, 211);
@@ -244,4 +252,80 @@ textarea:focus {
 }
 .potContainer span.base_bonus {
   position: initial;
+}
+
+/* Within Group Graphic */
+.liberal {
+  background-color: #3e7ce6;
+}
+.conservative {
+  background-color: #e0564b;
+}
+
+.withinGroupGraphic {
+  padding: 1em;
+  border-radius: 1em;
+  color: #fff;
+}
+.icon-center {
+  display: block;
+  font-size: 2em;
+}
+
+
+/* Across Group Graphic */
+.mainGroup {
+  color: #fff;
+  margin-bottom: 0.25em;
+  margin-left: 0.75em;
+  display: flex;
+  height: 7em;
+  position: relative;
+  border-radius: 1em 0 0 0;
+  align-items: center;
+  padding: 1em;
+  text-align: left;
+}
+.mainGroup .icon-left {
+  font-size: 2em;
+  margin-right: 0.5em;
+}
+.mainGroup:after {
+  content: '';
+  position: absolute;
+  right: -3.5em;
+  top: 0em;
+  background-color: inherit;
+  z-index: 2;
+  height: 7em;
+  width: 7em;
+  transform: rotate(-135deg);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+.opposingGroup {
+  color: #fff;
+  position: relative;
+  height: 2.5em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: 5em;
+  margin-right: 0.25em;
+  border-radius: 0 0 1em 0;
+}
+.opposingGroup .icon-right {
+  font-size: 1.5em;
+  margin-right: 1em;
+}
+.opposingGroup:after {
+  content: '';
+  position: absolute;
+  left: -1em;
+  top: -0.25em;
+  background-color: inherit;
+  z-index: 2;
+  height: 3em;
+  width: 3em;
+  transform: rotate(45deg);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
 }

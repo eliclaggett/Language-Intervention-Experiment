@@ -14,7 +14,7 @@ import ConsentForm from './async/ConsentForm.jsx';
 import PreEvaluation from "./async/PreEvaluation.jsx";
 import Tutorial from './async/Tutorial.jsx';
 import OpinionSurvey from './async/OpinionSurvey.jsx';
-import Cooperation from './semisync/Cooperation.jsx';
+// import Cooperation from './semisync/Cooperation.jsx';
 import ReflectionSurvey from './semisync/ReflectionSurvey.jsx';
 import Conversation from "./sync/Conversation.jsx";
 import PartnerAnswer from "./semisync/PartnerAnswer.jsx";
@@ -24,7 +24,7 @@ import Game from "./Game.jsx";
 import Lobby from "./Lobby.jsx";
 import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
 import CssBaseline from '@mui/joy/CssBaseline';
-import Cooperate from "./semisync/Cooperation.jsx";
+// import Cooperate from "./semisync/Cooperation.jsx";
 import PublicGoodsGame from "./semisync/PublicGoods.jsx";
 import { PlayerCreate } from "./PlayerCreate.jsx";
 
@@ -73,9 +73,6 @@ export default function App() {
     url = `${protocol}//${host}/${port}/query`;
   }
 
-  console.log('URL');
-  console.log(url);
-
   const connectToNLP = () => {
     // TODO: Implement
   }
@@ -85,8 +82,8 @@ export default function App() {
     
     // The server uses an encrypted connection when not being tested locally
     const nlpServerURL = (window.location.protocol === 'http:') ?
-      'ws://' + window.location.hostname + ':' + '9902':
-      'wss://' + window.location.hostname + '/' + '9902';
+      'ws://' + window.location.hostname + ':' + '9910':
+      'wss://' + window.location.hostname + '/' + '9910';
 
     // Set server protocol
     window.nlpServer = new WebSocket(nlpServerURL);
@@ -119,15 +116,16 @@ export default function App() {
     return [
 
       // [Warning] Test only
-      Conversation,
-
-
-      // Real onboarding steps
-      Recaptcha,
-      ConsentForm,
-      Tutorial,
-      // PreEvaluation, // No pre-evaluation
+      PublicGoodsGame,
       OpinionSurvey,
+
+
+      // // Real onboarding steps
+      // Recaptcha,
+      // ConsentForm,
+      // Tutorial,
+      // // PreEvaluation, // No pre-evaluation
+      // OpinionSurvey,
     ];
   }
   

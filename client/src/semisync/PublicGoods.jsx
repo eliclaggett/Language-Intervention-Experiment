@@ -34,11 +34,11 @@ export default function PublicGoodsGame({next}) {
     const [cooperationExplanation, setCooperationExplanation] = useState('');
     const [hypothetical, setHypothetical] = useState('');
     
-    const [shareType, setShareType] = useState('Share');
+    const [shareType, setShareType] = useState('Keep');
     const [shareAmt, setShareAmt] = useState(0);
     
-    const riskDisplayClass = shareAmt > 0.5 ? '' : 'hidden';
-    const minBonus = 1.0 - shareAmt;
+    const riskDisplayClass = shareAmt >= 1 ? '' : 'hidden';
+    const minBonus = gameParams.bonus - shareAmt;
     
     const [radioButtonVals, setRadioButtonVals] = useState();
     const [preventClick, setPreventClick] = useState(false);
@@ -66,7 +66,7 @@ export default function PublicGoodsGame({next}) {
     }
 
     function handleButtonClick(evt) {
-        player.set('submitCooperationDecision', shareAmt);
+        player.set('submitCooperationDecision', shareType == 'Keep' ? 0 : shareAmt);
         player.set('submitCooperationType', shareType);
         player.set('submitCooperationExplanation', cooperationExplanation);
         player.set('submitHypothetical', hypothetical);
@@ -88,7 +88,7 @@ export default function PublicGoodsGame({next}) {
         // Legend
       );
 
-    const maxShareAmt = 1.0;
+    const maxShareAmt = gameParams.maxBonusShare;
 
     const options = {
         responsive: true,
@@ -106,7 +106,7 @@ export default function PublicGoodsGame({next}) {
             },
             y: {
             min: 0,
-            max: ( gameParams.bonus - maxShareAmt )* 2,
+            max: gameParams.bonus + maxShareAmt * 2,
             grid: {
                 display: false
             }
@@ -116,15 +116,15 @@ export default function PublicGoodsGame({next}) {
     };
   
 
-    const defaultPlayer = 1.0;
-    const defaultPartner = 2.0;
+    const defaultPlayer = gameParams.bonus;
+    const defaultPartner = gameParams.bonus;
     const currentPlayer = defaultPlayer - shareAmt;
     let currentPartner = defaultPartner;
     if (shareType == 'Share')   currentPartner += shareAmt*2;
     else                        currentPartner -= shareAmt*2;
 
 
-    const labels = [['Default', formatMoney(defaultPlayer)], ['Current',formatMoney(currentPlayer)]];
+    const labels = [['Original', formatMoney(defaultPlayer)], ['Current',formatMoney(currentPlayer)]];
   
     const data = {
         labels,
@@ -138,7 +138,7 @@ export default function PublicGoodsGame({next}) {
     };
     
     
-    const partnerLabels = [['Default', formatMoney(defaultPartner)], ['Current',formatMoney(currentPartner)]];
+    const partnerLabels = [['Original', formatMoney(defaultPartner)], ['Current',formatMoney(currentPartner)]];
     const partnerData = {
         labels: partnerLabels,
         datasets: [
@@ -149,6 +149,41 @@ export default function PublicGoodsGame({next}) {
         }
         ],
     };
+
+    let shareUI = '';
+    let shareTxt = 'keep your bonus';
+    if (shareType == 'Share') {
+        shareUI = <Stack sx={{alignItems: 'center'}}>
+            <Typography level="body-md">Use the slider to specify an amount from {formatMoney(0)} to {formatMoney(gameParams.maxBonusShare)}</Typography>
+            <Slider 
+                style={{width: '20rem', mx: 'auto'}}
+                value={shareAmt} min={0} max={maxShareAmt} step={0.1} onChange={(e)=>setShareAmt(e.target.value)}
+            />
+            <Grid container columns={2} columnGap={8} justifyContent="center" alignItems="center">
+                <div className="potContainer">
+                    <span>Effect on <b>your</b><br/>bonus</span>
+                    <Bar options={options} data={data}/>
+                </div>                
+                <div className="potContainer">
+                    <span>Effect on <b>partner's</b><br/>bonus</span>
+                    <Bar options={options} data={partnerData} />
+                </div>
+            </Grid>
+            <Alert startDecorator={<WarningIcon/>} title="Risk" color="warning" className={riskDisplayClass} sx={{my: 3}}>
+                <div>
+                    <div><strong>High Allocation Risk</strong></div>
+                    <Typography level="body-sm" color="warning">
+                        Your bonus could decrease to <strong>{formatMoney(minBonus)}</strong> depending on your partner's allocation decision.
+                    </Typography>
+                </div>
+            </Alert>
+        </Stack>;
+
+        shareTxt = 'share ' + formatMoney(shareAmt);
+    }
+
+    
+
 
     return (
         <Container maxWidth="100vw">
@@ -171,35 +206,14 @@ export default function PublicGoodsGame({next}) {
                     You may:
                     </Typography>
                     <List component="ul" marker="disc">
-                        <ListItem>Keep it all</ListItem>
-                        <ListItem>Pay to <b>share</b> some with your partner</ListItem>
-                        <ListItem>Pay to <b>take away</b> from your partner</ListItem>
+                        <ListItem>Keep your bonus</ListItem>
+                        <ListItem>Pay to share some with your partner</ListItem>
                     </List>
                     <Typography level="body-md" textAlign="center">
-                    The effect on your partner is 2x the amount you pay. Test out your options by moving the slider below.
+                    The effect on your partner is {gameParams.shareMultiplier}x the amount you share.
                     </Typography>
-                
-
-                <Grid container columns={2} columnGap={8} justifyContent="center" alignItems="center">
-                    <div className="potContainer">
-                        <span>Effect on your<br />minimum bonus</span>
-                        <Bar options={options} data={data}/>
-                    </div>                
-                    <div className="potContainer">
-                        <span>Effect on partner's<br />minimum bonus</span>
-                        <Bar options={options} data={partnerData} />
-                    </div>
-                </Grid>
-                <Alert startDecorator={<WarningIcon/>} title="Risk" color="warning" className={riskDisplayClass} sx={{my: 3}}>
-                    <div>
-                        <div><strong>High Allocation Risk</strong></div>
-                        <Typography level="body-sm" color="warning">
-                            Your bonus could decrease to <strong>{formatMoney(minBonus)}</strong> depending on your partner's allocation decision.
-                        </Typography>
-                    </div>
-                </Alert>
-                <Typography level="body-md">Would you like to share or take away?</Typography>
-                <RadioGroup aria-label="Share type" name="shareType" defaultValue="Share" onChange={(e)=>setShareType(e.target.value)}>
+                <Typography level="body-md">Would you like to keep or share?</Typography>
+                <RadioGroup aria-label="Share type" name="shareType" defaultValue="Keep" onChange={(e)=>setShareType(e.target.value)}>
                         <List
                             sx={{
                             '--List-gap': '0.5rem',
@@ -208,8 +222,8 @@ export default function PublicGoodsGame({next}) {
                             '--ListItemDecorator-size': '32px',
                             }}
                         >
-                            {[ 'Share',
-                                'Take'].map((item, index) => (
+                            {[ 'Keep',
+                                'Share'].map((item, index) => (
                             <ListItem variant="outlined" key={item} sx={{ boxShadow: 'sm' }}>
                                 <Radio
                                 overlay
@@ -232,16 +246,11 @@ export default function PublicGoodsGame({next}) {
                             ))}
                         </List>
                     </RadioGroup>
-                    <Typography level="body-md">Use the slider to specify an amount from $0 to $1</Typography>
-                <Slider 
-                
-                style={{width: '20rem', mx: 'auto'}}
-                defaultValue={0} min={0} max={maxShareAmt} step={0.1} onChange={(e)=>setShareAmt(e.target.value)}/>
-
+                    {shareUI}
 
                 <Typography level='body-md' textAlign={'center'}>To help us understand your decision, it would be great if you could answer the following questions.</Typography>
                 <FormControl>
-                    <FormLabel>Please explain why you selected to {shareType.toLowerCase()} {formatMoney(shareAmt)}</FormLabel>
+                    <FormLabel>Please explain why you selected to {shareTxt}</FormLabel>
                     <Textarea minRows={3} value={cooperationExplanation} onChange={(e) => setCooperationExplanation(e.target.value)} placeholder="Type answer here"/>
                     {/* <FormHelperText>This is a helper text.</FormHelperText> */}
                 </FormControl>
@@ -251,29 +260,6 @@ export default function PublicGoodsGame({next}) {
                     <Textarea minRows={3} value={hypothetical} onChange={(e) => setHypothetical(e.target.value)} placeholder="Type answer here"/>
                     {/* <FormHelperText>This is a helper text.</FormHelperText> */}
                 </FormControl>
-
-                {/* <RadioGroup
-                    overlay
-                    name="q1"
-                    value={currentValue}
-                    // orientation="horizontal"
-                    // sx={{ display: 'flex', flexDirection: 'row', mx: 'auto' }}
-                    onChange={handleRadioButtonChange}
-                >
-                    <FormControl sx={{ p: 0, flexDirection: 'row', gap: 2, mt: 4 }}>
-                        <Radio value="1" />
-                        <div>
-                            <FormLabel>Award yourself a {formatMoney(gameParams.defectionBonus)} bonus.</FormLabel>
-                        </div>
-                    </FormControl>
-                    <FormControl sx={{ p: 0, flexDirection: 'row', gap: 2 }}>
-                        <Radio value="2" />
-                        <div>
-                            <FormLabel>Award you and your partner a {formatMoney(gameParams.cooperationBonus)} bonus.</FormLabel>
-                            <FormHelperText>If you select this but your partner does not, you will receive no bonus.</FormHelperText>
-                        </div>
-                    </FormControl>
-                </RadioGroup> */}
 
                 <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}>
                     <Button sx={{ my: 2 }} onClick={handleButtonClick}>Confirm Decision</Button>

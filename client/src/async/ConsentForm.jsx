@@ -137,7 +137,7 @@ export default function ConsentForm({ next }) {
                         tutorial questions correctly), and you complete the game, you will also
                         receive a completion bonus of {formatMoney(gameParams.task2Pay)}. In
                         addition, those who participate in the game may earn a bonus up to
-                        {formatMoney(gameParams.maxBonus)} in a performance bonus based on the
+                        {formatMoney(gameParams.bonus + (gameParams.maxBonusShare * 2))} in a performance bonus based on the
                         decisions they make while playing the game.
                     </p>
                     <p>There will be no cost to you if you participate in this study.</p>

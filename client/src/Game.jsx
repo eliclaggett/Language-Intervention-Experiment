@@ -23,7 +23,7 @@ import {
   useStageTimer
 } from "@empirica/core/player/classic/react";
 import Conversation from "./sync/Conversation.jsx";
-import Cooperate from "./semisync/Cooperation.jsx";
+// import Cooperate from "./semisync/Cooperation.jsx";
 import ReflectionSurvey from "./semisync/ReflectionSurvey.jsx";
 import PartnerAnswer from "./semisync/PartnerAnswer.jsx";
 import SemiSynchronousSteps from "./SemiSynchronousSteps.jsx";

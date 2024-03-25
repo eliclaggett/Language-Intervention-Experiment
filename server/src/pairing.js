@@ -263,7 +263,8 @@ function makePairs(players, samplingType) {
 
     if (typeof (pairs[playerIdx]) != 'undefined') { continue; }
 
-    let pairType = Math.round(Math.random());
+    // let pairType = Math.round(Math.random()); // Make random assortment of in-group and out-group pairs
+    let pairType = 1; // Prioritize making out-group pairs
 
     if (pairType == 1) {
       let success = makeOutGroupPairs(6, playerIdx);

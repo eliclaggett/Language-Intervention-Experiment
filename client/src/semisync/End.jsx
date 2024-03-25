@@ -18,6 +18,7 @@ export default function End({next}) {
     const gameParams = player.get('gameParams');
     const completionCode = player.get('completionCode');
     const processedGameEnd = player.get('processGameEnd');
+    const endReason = player.get('endReason') || '';
     const game = useGame();
     const stageTimer = useStageTimer();
 
@@ -59,12 +60,8 @@ export default function End({next}) {
     }
     let bonusPayUI = '';
     const cooperationDecision = player.get('submitCooperationDecision');
-    const cooperationType = player.get('submitCooperationType');
     const partnerCooperationDecision = player.get('partnerCooperationDecision') || -1;
     const partnerCooperationType = player.get('partnerCooperationType');
-
-    const cooperationTypeText = cooperationType == 'Share' ? 'share with' : 'take from';
-    const partnerCooperationTypeText = partnerCooperationType == 'Share' ? 'shared with' : 'took from';
 
 
     if (partnerCooperationDecision != -1) {
@@ -72,8 +69,6 @@ export default function End({next}) {
         let bonus = gameParams.bonus - cooperationDecision;
         if (partnerCooperationType == 'Share') {
             bonus += (partnerCooperationDecision * 2);
-        } else {
-            bonus -= (partnerCooperationDecision * 2);
         }
 
         bonus = Math.max(bonus, 0);
@@ -94,31 +89,6 @@ export default function End({next}) {
         totalPay += bonus;
     }
 
-    // if (cooperationDecision === '1') {
-    //     bonusPayUI = <tr>
-    //         <td>Bonus Payment</td>
-    //         <td>{formatMoney(gameParams.defectionBonus)}</td>
-    //     </tr>;
-    //     totalPay += gameParams.defectionBonus;
-    // } else if (cooperationDecision === '2') {
-        
-    //     if (partnerCooperationDecision === '2') {
-    //         bonusPayUI = <tr>
-    //             <td>Bonus Payment</td>
-    //             <td>{formatMoney(gameParams.mutualCooperationBonus)}</td>
-    //         </tr>;
-    //         totalPay += gameParams.mutualCooperationBonus;
-    //     } else {
-    //         bonusPayUI = <tr>
-    //             <td>Bonus Payment</td>
-    //             <td>{formatMoney(gameParams.cooperationBonus)}</td>
-    //         </tr>;
-    //         totalPay += gameParams.cooperationBonus;
-    //     }
-        
-    // }
-    
-
     function handleRadioButtonChange(evt) {
         setCurrentValue(evt.target.value);
         setRadioButtonVals(radioButtonVals => ({
@@ -136,10 +106,10 @@ export default function End({next}) {
     let myContributionText = '';
     let partnerContributionText = '';
     if (cooperationDecision > 0) {
-        myContributionText = <ListItem>Subtract {formatMoney(cooperationDecision)} to {cooperationTypeText} your partner.</ListItem>
+        myContributionText = <ListItem>Subtract {formatMoney(cooperationDecision)} to share with your partner.</ListItem>
     }
     if (partnerCooperationDecision > 0) {
-        partnerContributionText = <ListItem>{partnerCooperationType == 'Share' ? 'Add' : 'Subtract'} {formatMoney(partnerCooperationDecision * 2)} because your partner {partnerCooperationTypeText} you.</ListItem>;
+        partnerContributionText = <ListItem>Add {formatMoney(partnerCooperationDecision * 2)} because your partner shared with you.</ListItem>;
     }
 
     if (!startedTask2) {
@@ -167,6 +137,35 @@ export default function End({next}) {
                     {completionCode}
                 </Typography>
             </div>;
+    } else if (endReason && (endReason == 'reported' || endReason == 'reportPartner')) {
+        paymentUI = <div>
+        <Typography level="body-md" textAlign="center">A participant reported profane language. We were unable to continue with the study. Your total earnings are:</Typography>
+        <Table borderAxis="none" variant="plain" sx={{ py: 3, maxWidth: '15rem', mx: 'auto', '& tbody td:nth-child(1)': { width: '75%' }, 'tfoot': { fontWeight: 'bold' } }}>
+            <tbody>
+                <tr>
+                    <td>Task 1 Pay</td>
+                    <td>{formatMoney(gameParams.task1Pay)}</td>
+                </tr>
+                <tr>
+                    <td>Task 2 Pay</td>
+                    <td>{formatMoney(gameParams.task2Pay)}</td>
+                </tr>
+            </tbody>
+            <tfoot>
+            <tr>
+                    <td>Total</td>
+                    <td>{formatMoney(gameParams.task1Pay + gameParams.task2Pay)}</td>
+                </tr>
+            </tfoot>
+        </Table>
+
+        <Typography level="body-md" textAlign={'center'}>
+            Please submit this completion code when you are ready:
+        </Typography>
+        <Typography level="h2" textAlign={'center'} sx={{py:2}}>
+            {completionCode}
+        </Typography>
+    </div>;
     } else {
         if (stageTimer && stageTimer.remaining && partnerCooperationDecision == -1) {
             paymentUI = <div>
