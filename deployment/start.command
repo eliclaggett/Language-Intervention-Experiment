@@ -5,19 +5,26 @@ cd "$parent_path"
 # Load dotenv
 export $(cat .env | xargs)
 
-ssh -i deployment/server.pem -tt $SERVER_SSH bash << HERE
+ssh -i deployment/server.pem $SERVER_SSH -tt bash << HERE
  cd $SERVER_PATH
  nohup ./start.sh &
- sleep 1
- tail -f nohup.out
+ exit 
 HERE
 
 # Stop all child processes when we stop this script
 function cleanup()
 {
-    /bin/bash ./stop.command
+    echo ""
+    echo "You are leaving the server, but Empirica is still running"
+    echo "Bye bye!"
+    # /bin/bash ./stop.command
 }
 
 # Keep script open until an interrupt is sent
 trap cleanup SIGINT
-wait
+
+ssh -i deployment/server.pem $SERVER_SSH -tt bash << HERE
+    cd $SERVER_PATH
+    clear
+    tail -f nohup.out
+HERE

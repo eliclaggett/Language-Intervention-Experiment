@@ -1,4 +1,5 @@
 #!/bin/bash
+tput sc
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")/../" ; pwd -P )
 cd "$parent_path"
 
@@ -20,4 +21,6 @@ sftp -b - -i deployment/server.pem $SERVER_SSH <<EOF
 	exit
 EOF
 
+tput rc
+tput el
 echo "Done deploying the experiment!";

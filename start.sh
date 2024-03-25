@@ -47,11 +47,11 @@ echo "Running Empirica and Python in '${DEPLOYMENT}' mode"
 # Run Empirica
 if [ "$DEPLOYMENT" == "dev" ]
 then
-    { empirica -s ":${PORT_EMPIRICA}" & }
+    { empirica -s ":${PORT_EMPIRICA}" --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" & }
     pid1=$!
     echo "Empirica running with PID $pid1";
 else
-    { emp serve "${EXPERIMENT_NAME}.tar.zst" -s ":${PORT_EMPIRICA}" --tajriba.store.file "${STORE_PATH}/tajriba-${dt}.json" > "$current_dir/log_empirica.log" 2>&1 & }
+    { emp serve "${EXPERIMENT_NAME}.tar.zst" -s ":${PORT_EMPIRICA}"  --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" --tajriba.store.file "${STORE_PATH}/tajriba-${dt}.json" > "$current_dir/log_empirica.log" 2>&1 & }
     pid1=$!
     echo "Empirica running with PID $pid1";
 fi

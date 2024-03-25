@@ -14,7 +14,7 @@ if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -
 rm .empirica/local/tajriba.json
 
 # Run Empirica
-{ $(go env GOPATH)/bin/emp -s ":${PORT_EMPIRICA}" & }
+{ emp -s ":${PORT_EMPIRICA}" --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" & }
 pid1=$!
 
 # Run NLP Server
@@ -26,6 +26,7 @@ function cleanup()
 {
     # Cleanup child processes
     kill -9 $pid1 $pid2
+    # kill -9 $pid1
     echo ''
     echo "Bye bye!"
 }
