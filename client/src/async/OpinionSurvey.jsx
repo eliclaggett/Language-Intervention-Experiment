@@ -21,6 +21,7 @@ export default function OpinionSurvey({next}) {
     const [radioButtonVals, setRadioButtonVals] = useState();
     const [preventClick, setPreventClick] = useState(false);
     const [currentValue, setCurrentValue] = useState('');
+    const [opacity, setOpacity] = useState(1);
     const surveyQuestions = [
         "I would want my kids to be taught evolution as a fact of biology",
         "My second amendment right to bear arms should be protected",
@@ -39,9 +40,10 @@ export default function OpinionSurvey({next}) {
             ...radioButtonVals,
             [evt.target.name]: evt.target.value
         }));
-
+        setOpacity(0.5);
         setTimeout(() => {
             setCurrentValue('');
+            setOpacity(1);
             if (step < maxSteps) {
                 setPrompt(surveyQuestions[step]);
                 setStep(step+1);
@@ -49,7 +51,7 @@ export default function OpinionSurvey({next}) {
                 player.set('submitOpinionSurvey', radioButtonVals);
                 next();
             }
-        }, 50);
+        }, 500);
     }
 
     return (
@@ -66,7 +68,8 @@ export default function OpinionSurvey({next}) {
                 },
                 mx: 'auto',
                 mt: '10rem',
-                textAlign: 'center'
+                textAlign: 'center',
+                opacity: opacity
             }} gap={1} >
                 <Typography level="h2">
                 How do you feel about this statement? ({step} / {maxSteps})

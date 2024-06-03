@@ -6,7 +6,7 @@
  * This ReactJS file displays the normal ending screen for the experiment.
  */
 import * as React from 'react';
-import { Button, Box, Container, List, ListItem, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup, Table, Textarea } from '@mui/joy';
+import { Button, Box, Container, List, ListItem, Typography, Sheet, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup, Table, Textarea, Modal, ModalClose } from '@mui/joy';
 import { useState } from 'react';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
@@ -33,6 +33,8 @@ export default function End({next}) {
     const [preventClick, setPreventClick] = useState(false);
     const [currentValue, setCurrentValue] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [open, setOpen] = useState(false);
+
     const surveyQuestions = [
         "I would want my kids to be taught evolution as a fact of biology",
         "My second amendment right to bear arms should be protected",
@@ -60,7 +62,7 @@ export default function End({next}) {
     }
     let bonusPayUI = '';
     const cooperationDecision = player.get('submitCooperationDecision');
-    const partnerCooperationDecision = player.get('partnerCooperationDecision') || -1;
+    const partnerCooperationDecision = player.get('partnerCooperationDecision');
     const partnerCooperationType = player.get('partnerCooperationType');
 
 
@@ -130,12 +132,51 @@ export default function End({next}) {
                     </tfoot>
                 </Table>
 
-                <Typography level="body-md" textAlign={'center'}>
-                    Please submit this completion code when you are ready:
+                <Typography level="body-md" textAlign={'center'} fontWeight={'bold'}>
+                    Please return this study. We will compensate you with a bonus payment.
                 </Typography>
-                <Typography level="h2" textAlign={'center'} sx={{py:2}}>
+                <Typography level="body-md" textAlign={'center'} sx={{pt: 1, textDecoration: 'underline', cursor: 'pointer'}} onClick={() => {setOpen(!open)}}>
+                    Why must I return the study?
+                </Typography>
+                <Modal
+                    open={open}
+                    onClose={() => setOpen(false)}
+                    sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                >
+                    <Sheet
+                    variant="outlined"
+                    sx={{
+                        maxWidth: 500,
+                        borderRadius: 'md',
+                        p: 3,
+                        boxShadow: 'lg',
+                    }}
+                    >
+                    <ModalClose variant="plain" sx={{ m: 1 }} />
+                    <Typography
+                        component="h2"
+                        id="modal-title"
+                        level="h4"
+                        textColor="inherit"
+                        fontWeight="lg"
+                        mb={1}
+                    >
+                        Variable payment studies on Prolific
+                    </Typography>
+                    <Typography id="modal-desc" textColor="text.tertiary">
+                        It is our top priority that participants are compensated fairly for joining our studies. Prolific cares too, and uses an automated system to penalize researchers for paying too little.
+                        <br/><br/>
+                        However, this automated system calculates your hourly wage based on the maximum time we allow for the study, not the actual time you spend on the study.
+                        <br/><br/>
+                        To avoid being penalized by this automated system, we must ask you to return the study. <strong>We will still pay you via a bonus payment,</strong> but we agree that this is inconvenient.
+                        <br/><br/>
+                        We are working with Prolific to make changes to their automated wage calculations, and recommend you <a target="_blank" href="https://participant-help.prolific.com/hc/en-gb/requests/new" style={{textDecoration: 'underline'}}>contact them</a> with any complaints you might have.
+                    </Typography>
+                    </Sheet>
+                </Modal>
+                {/* <Typography level="h2" textAlign={'center'} sx={{py:2}}>
                     {completionCode}
-                </Typography>
+                </Typography> */}
             </div>;
     } else if (endReason && (endReason == 'reported' || endReason == 'reportPartner')) {
         paymentUI = <div>
@@ -235,7 +276,7 @@ export default function End({next}) {
 
                 {startedTask2 ? <div>
                 <Typography level="body-md">
-                If you have time, please tell us why you chose the bonus option that you did. Please add any other feedback here, too.
+                If you have time, please tell us about your experience participating in the study and list any feedback here, too.
                 </Typography>
                 <FormControl>
                     <Textarea placeholder="Type your feedback here..." minRows={3} value={feedback} onChange={(e) => setFeedback(e.target.value)}></Textarea>

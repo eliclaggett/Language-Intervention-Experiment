@@ -12,7 +12,7 @@ import { usePlayer } from "@empirica/core/player/classic/react";
 import { useState, useEffect } from 'react';
 import { formatMoney } from '../utils/formatting';
 import ProgressList from '../components/ProgressList';
-import { Done } from '@mui/icons-material';
+import { Done, Warning } from '@mui/icons-material';
 
 export default function Tutorial({ next }) {
 
@@ -21,11 +21,14 @@ export default function Tutorial({ next }) {
     if (!gameParams) window.location.reload();
     const correctAnswers = [1, 2, 2, 3];
     const totalBasePay = gameParams.task1Pay + gameParams.task2Pay;
-    const [step, setStep] = useState(4);
+    const [step, setStep] = useState(1);
     const [nextButtonDisabled, setNextButtonDisabled] = useState(false);
     const [backButtonDisabled, setBackButtonDisabled] = useState(true);
     const [errorDisplay, setErrorDisplay] = useState('none');
     const [q4SuccessDisplay, setQ4SuccessDisplay] = useState('none');
+    const [backNextDisplay, setBackNextDisplay] = useState('flex');
+    const [lowBonusExplanation, setLowBonusExplanation] = useState('');
+    const exampleShareAmt = 1;
 
     function shuffleArray(array) {
         // Citation: https://stackoverflow.com/questions/2450954
@@ -48,8 +51,8 @@ export default function Tutorial({ next }) {
     const q4Answers = [
         [1, formatMoney(gameParams.bonus)],
         [2, formatMoney(0)],
-        [3, formatMoney(gameParams.bonus+1)], // Correct
-        [4, formatMoney(gameParams.bonus-1)]
+        [3, formatMoney(gameParams.bonus-exampleShareAmt+exampleShareAmt*gameParams.shareMultiplier)], // Correct
+        [4, formatMoney(gameParams.bonus+exampleShareAmt*gameParams.shareMultiplier)]
     ];
 
     const [q2RadioButtons, setQ2RadioButtons] = useState([]);
@@ -119,14 +122,33 @@ export default function Tutorial({ next }) {
             setNextButtonDisabled(true);
         }
 
-        if (step == 4) {
+        if (step == 5) {
             // Mark that the tutorial was finished
             player.set('submitTutorial', true);
             next();
         } else {
+            if (step == 4) {
+                setBackNextDisplay('none');
+            }
             setStep(step+1);
+            setQ4SuccessDisplay('none');
             setBackButtonDisabled(false);
         }
+    }
+
+    function handleWhy() {
+        setLowBonusExplanation(<div>
+            <br/>
+            <p>Remember, your default bonus is {formatMoney(gameParams.bonus)}.
+            If you share {formatMoney(gameParams.maxBonusShare)} and your partner shares {formatMoney(0)}, your final bonus will decrease to {formatMoney(gameParams.bonus-gameParams.maxBonusShare)}.</p>
+            <br/>
+            <p>Choosing to share is a risk.</p>
+        </div>);
+    }
+
+    function handleFinishTutorial() {
+        player.set('submitTutorial', true);
+        next();
     }
 
     // Logic to move to next step or stop the experiment
@@ -274,7 +296,7 @@ export default function Tutorial({ next }) {
                                 After you complete both Part 1 and Part 2 of this study, you are guaranteed a base payment of {formatMoney(totalBasePay)}.
                                 In addition, you will earn a bonus of {formatMoney(gameParams.bonus)} that you may keep or share with your partner.
                             </Typography>
-                            <Typography level="h3" sx={{pt: 2}}>Bonus</Typography>
+                            <Typography level="h3" sx={{pt: 2}}>Default Bonus</Typography>
                             <Typography level="body-md">
                             You may choose to keep the default study bonus of {formatMoney(gameParams.bonus)}.
                             </Typography>
@@ -284,7 +306,7 @@ export default function Tutorial({ next }) {
                             <br/>
                             They will receive {gameParams.shareMultiplier}x the amount you share.
                             <br/>
-                            For example, if you share $0.50 with your partner, your bonus will decrease by $0.50 and their bonus will increase by {formatMoney(0.5*gameParams.shareMultiplier)}.
+                            For example, if you share {formatMoney(exampleShareAmt)} with your partner, your bonus will decrease by {formatMoney(exampleShareAmt)} and their bonus will increase by {formatMoney(exampleShareAmt*gameParams.shareMultiplier)}.
                             </Typography>
                             
                             <FormControl sx={{pt: 2}}>
@@ -294,6 +316,34 @@ export default function Tutorial({ next }) {
                                 </RadioGroup>
                             </FormControl>
                         </Stack>;
+    } else if (step == 5) {
+        tutorialStepUI = <Stack gap={1}>
+            <Alert
+                variant="soft"
+                color="danger"
+                invertedColors
+                startDecorator={
+                    <Warning />
+                }
+                sx={{ alignItems: 'flex-start', gap: '1rem' }}
+            >
+                <Box sx={{ flex: 1 }}>
+                <Typography level="h3">Be warned!</Typography>
+                <Typography level="body-md">
+                    If you choose to share your bonus but your partner does not, your final bonus payment will decrease.
+                    {lowBonusExplanation}
+                </Typography>
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                    <Button variant="outlined" size="sm" onClick={handleWhy}>
+                    Why?
+                    </Button>
+                    <Button variant="solid" size="sm" onClick={handleFinishTutorial}>
+                    I understand
+                    </Button>
+                </Box>
+                </Box>
+            </Alert>
+        </Stack>; 
     }
 
     // UI
@@ -334,9 +384,9 @@ export default function Tutorial({ next }) {
                         color="success"
                         sx={{ display: q4SuccessDisplay }}
                     >
-                        Exactly! {formatMoney(gameParams.bonus)} - {formatMoney(1)} (the amount you shared) + {formatMoney(2)} ({gameParams.shareMultiplier}x what your partner shared).
+                        Exactly! {formatMoney(gameParams.bonus)} - {formatMoney(exampleShareAmt)} (the amount you shared) + {formatMoney(exampleShareAmt*gameParams.shareMultiplier)} ({gameParams.shareMultiplier}x what your partner shared).
                 </Alert>
-                <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}>
+                <Box sx={{ display: backNextDisplay, justifyContent: 'center', width: '100%', flexDirection: 'row'}}>
                     <Button sx={{ my: 2, mr:1 }} onClick={handleBack} disabled={backButtonDisabled}>Back</Button>
                     <Button sx={{ my: 2, mr:1 }} onClick={handleNext} disabled={nextButtonDisabled}>Next</Button>
                 </Box>

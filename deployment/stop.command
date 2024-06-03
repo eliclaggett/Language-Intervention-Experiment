@@ -20,3 +20,14 @@ ssh -i deployment/server.pem $SERVER_SSH bash << HERE
  exit
 HERE
 
+ssh -i ~/.ssh/eli-xps eli@eli-xps.lan.local.cmu.edu bash << EOF
+ if test -f ~/RUNNING_PID
+ then
+ kill \`cat ~/RUNNING_PID\`
+ rm ~/RUNNING_PID
+ echo "Successfully stopped NLP!";
+ else
+ echo "No NLP running!";
+ fi
+ exit
+EOF

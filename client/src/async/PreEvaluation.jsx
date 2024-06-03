@@ -27,7 +27,7 @@ import { GasMeterOutlined } from '@mui/icons-material';
 export default function PreEvaluation({next}) {
 
     const player = usePlayer();
-    const playerId = player.get('id');
+    const playerId = player.id;
     const finishPreEval = player.get('finishPreEval') || false;
     if (finishPreEval) {
         next();
@@ -119,7 +119,7 @@ export default function PreEvaluation({next}) {
 
             <ProgressList items={[
                 {name: 'Tutorial', time: '~3 min'},
-                {name: 'Practice Session', time: '~5 min'},
+                // {name: 'Practice Session', time: '~5 min'},
                 {name: 'Questionnaire', time: '~1 min'},
                 ]} active={1} />
 

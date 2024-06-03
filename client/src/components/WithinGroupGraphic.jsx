@@ -14,7 +14,7 @@ export default function WithinGroupGraphic({
     opinionDirection = -1
 }) {
     const player = usePlayer();
-    const playerId = player.get('id');
+    const playerId = player.id;
     const gameParams = player.get('gameParams');
 
     const opinionText = opinionDirection > 3 ? 'agree' : 'disagree';

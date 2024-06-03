@@ -7,11 +7,11 @@
  * Participants can use this time to become acquainted with pairing methodology and the features of the chat.
  */
 import * as React from 'react';
-import { Button, Container, Typography, Stack, Alert } from '@mui/joy';
+import { Button, Container, IconButton, Typography, Stack, Alert } from '@mui/joy';
 import { useEffect, useState } from 'react';
 import { usePlayer, useGame } from "@empirica/core/player/classic/react";
 import { msToTime, formatMoney } from './utils/formatting';
-import { Star } from '@mui/icons-material';
+import { SendRounded, StarRounded } from '@mui/icons-material';
 
 export default function Lobby() {
 
@@ -57,6 +57,58 @@ export default function Lobby() {
         // player.set('clickButton', {data: 'hi'});
         game.set('startLobby', true);
     }
+    let treatmentDescription = '';
+
+    if (gameParams.treatmentType == 'suggestion') {
+        treatmentDescription = <div>
+            <Typography level="h3" textAlign="">
+            <StarRounded style={{color: 'gold'}}/>Chat AI Features:
+            </Typography>
+            <Typography level="body-md" textAlign="left">
+            You may occasionally receive message suggestions below the input field. Please feel free to use them or ignore them. The suggestions will appear like this:
+            </Typography>
+
+            <div className='msgSend treatment example'>
+                <span>Suggestion (click to copy)</span>
+                <div className="input-wrapper">
+                    <div>Example suggested message</div>
+                </div>
+                <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+            </div>
+        </div>;
+    } else if (gameParams.treatmentType == 'rewrite') {
+        // TODO: Implement tutorial for message rewrites
+        treatmentDescription = <div>
+            <Typography level="h3" textAlign="" sx={{pt: 4}}>
+            <StarRounded style={{color: 'gold'}}/>Chat AI Features:
+            </Typography>
+            <Typography level="body-md" textAlign="left">
+            You may occasionally receive AI suggestions to rephrase a message before you send it. Please feel free to use them or ignore them. The suggestions will appear like this, below the chat window:
+            </Typography>
+
+            <div className='msgSend treatment original'>
+                {/* <div id="rewriteHint">pick a<br />message</div> */}
+                <span>Original message </span>
+                <div className="input-wrapper">
+                    <div>'Example original message</div>
+                </div>
+                <IconButton variant="plain">
+                    <SendRounded />
+                </IconButton>
+            </div>
+            <div className='msgSend treatment example'>
+                <span>Suggested rephrasing (click to edit)</span>
+                <div className="input-wrapper">
+                    <div>Example suggested rephrasing</div>
+                </div>
+                <IconButton variant="plain">
+                    <SendRounded />
+                </IconButton>
+            </div>
+        </div>;
+    } else if (gameParams.treatmentType == 'completion') {
+        // TODO: Implement tutorial for message autocompletions
+    }
 
     return (
         <Container maxWidth="100vw">
@@ -70,9 +122,9 @@ export default function Lobby() {
             }} gap={1} >
                 {/* <img src="images/undraw_chatting_re_j55r.svg" id="headerImg_recaptcha" /> */}
                 <Typography level="h1">
-                Almost there! Prepare for the next task
+                Almost there!<br />Prepare for the next task
                 </Typography>
-                <Typography level="body-md">
+                <Typography level="body-md" textAlign="left">
                 We are waiting for all participants to finish onboarding. Then, you will be assigned a partner and
                 enter a chatroom with them.
                 </Typography>
@@ -80,7 +132,7 @@ export default function Lobby() {
                 Maximum wait time {timeRemaining}
                 </Typography>
 
-                <Typography level="h3" textAlign="left">
+                <Typography level="h3" textAlign="center" sx={{pt: 4}}>
                 Discussion About Assigned Topic ({gameParams.chatTime} min):
                 </Typography>
                 <Typography level="body-md" textAlign="left">
@@ -89,23 +141,21 @@ export default function Lobby() {
                 Try to understand how and why your partner formed their opinion by
                 asking questions and comparing their answers to your own.
                 </Typography>
-                <Typography level="h3" textAlign="left">
-                Discussion About Bonus Option ({gameParams.cooperationDiscussionTime}
-                min):
-                </Typography>
-                <Typography level="body-md" textAlign="left">
-                Then, you will have {gameParams.cooperationDiscussionTime} minutes
-                to decide on a bonus option with your partner. After that, you
-                will write a report about the conversation.
-                </Typography>
-                <Alert variant='solid' color='primary' startDecorator={<Star />} sx={{textAlign:'left'}}>
+                
+                {treatmentDescription}
+
+                {/* <Alert variant='solid' color='primary' startDecorator={<Star />} sx={{textAlign:'left'}}>
                     Remember that you must complete the entire study to be eligible for the maximum payment.
-                </Alert>
-                <Typography level="body-md" textAlign="left">
-                    Note: Refrain from using offensive language. If your partner is
+                </Alert> */}
+                {/* <Typography level="body-md" textAlign="left">
+                    Note:
+                </Typography> */}
+                <ul  style={{ listStyle: 'disc', margin: '0.5em 0', padding: '0 1.5em', textAlign: 'left'}}>
+                    <li>Remember that you must complete the entire study to be eligible for the maximum payment.</li>
+                    <li>Refrain from using offensive language. If your partner is
                     abusive or unresponive, you can end the task by clicking the
-                    "Report Partner" button below the chat window:
-                </Typography>
+                    "Report Language" button below the chat window:</li>
+                </ul>
                 <Button variant='outlined' color="danger" sx={{
                     flex: 0,
                     width: '10rem',

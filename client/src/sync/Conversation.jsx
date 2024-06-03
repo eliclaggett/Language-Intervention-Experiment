@@ -7,10 +7,10 @@
  */
 import React,{ useState, useEffect, useRef } from 'react';
 import { Button, Box, Container, IconButton, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup } from '@mui/joy';
-import SendRoundedIcon from '@mui/icons-material/SendRounded';
-import { PlaylistRemoveTwoTone, SmartToyOutlined } from '@mui/icons-material';
+import { PlayCircleRounded, PlaylistRemoveTwoTone, SmartToyOutlined, SendRounded, ScheduleSendRounded } from '@mui/icons-material';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
+import { wsSend } from '../utils/utils.js';
 
 import '../chat.scss';
 import { Avatar, MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
@@ -29,21 +29,28 @@ export default function Conversation({next}) {
 
     // const timerMixin = TimerMixin();
     const player = usePlayer();
-    const playerId = player.get('id');
+    const playerId = player.id;
+    const playerMsgCount = player.get('msgCount') || 999;
     const gameParams = player.get('gameParams');
-    const playerGroup = player.get('group');
-    const partnerGroup = player.get('partnerGroup');
+    const playerGroup = player.get('group') || 0;
+    const partnerGroup = player.get('partnerGroup') || 0;
+    const pairType = playerGroup == partnerGroup ? 0 : 1;
     const acknowledgedGroup = player.get('acknowledgeGroup') || false;
+    const msgUnderReview = player.get('msgUnderReview') || '';
+    const [editingMsg, setEditingMsg] = useState(false);
+    const [rngPerMessage, setRngPerMessage] = useState(0);
 
 
-    const topic = player.get('topic');
+    const topic = player.get('topic') || 'q1';
     const opinionSurveyResponses = player.get('submitOpinionSurvey');
-    const opinionStrength = opinionSurveyResponses[topic]
+    const opinionStrength = opinionSurveyResponses ? opinionSurveyResponses[topic] : 0;
 
     const game = useGame();
     const stageTimer = useStageTimer();
+    const currentStage = game.get('currentStage');
 
     const [step, setStep] = useState(1);
+    const [suggestionIdx, setSuggestionIdx] = useState(-1);
     const [text, setText] = useState('');
     const [autocompleteOptions, setAutocompleteOptions] = useState(['']);
     const [radioButtonVals, setRadioButtonVals] = useState();
@@ -59,7 +66,7 @@ export default function Conversation({next}) {
     // Empirica message state
     const chatChannel = player.get('chatChannel');
     const typingChannel = player.get('typingChannel') || '';
-    const messages = game.get(chatChannel);
+    const messages = game.get(chatChannel) || [];
     let pairTypingStatus = game.get(typingChannel) || [false, false];
     
     // The typing channel is an attribute of the game that allows participants to see when their partner types and vice versa
@@ -71,7 +78,7 @@ export default function Conversation({next}) {
     const [msgsUI, setMsgsUI] = useState([]);
     let msgKey = 'm';
     let msgIdx = 0;
-    let msgCount = 0;
+    const [msgCount, setMsgCount] = useState(0);
 
     const valueRef = useRef(text);
     valueRef.current = text;
@@ -88,16 +95,40 @@ export default function Conversation({next}) {
     useEffect(() => {
 
         window.autocompletion = undefined;
+        window.canRequestAutocomplete = true;
+        window.requestRewrite = false;
+
         // TEST-ONLY
         // setAutocompleteOptions(['Hi there! I\'m happy to chat with you about this topic'])
 
+
+        if (messages && messages.length >= 2) {
+            const histMsgs = messages;
+            histMsgs[0].personId = -1;
+            histMsgs[1].personId = -1;
+
+            wsSend(JSON.stringify({
+                command: 'update_history',
+                pairId: player.id,
+                pairType: pairType,
+                history: histMsgs,
+                topic: parseInt(topic.substring(1))-1,
+                topicAgree: opinionStrength
+            }), true);
+        }
+
         // Handle receiving a message from the server
+        window.suggestionIdx = -1;
         window.nlpServer.onmessage = (msg) => {
 
             const data = JSON.parse(msg.data);
             
-            let currentAutocompletion = typeof(window.autocompletion) === 'undefined' ?  '' : window.autocompletion;
-
+            if(data.idx != window.suggestionIdx) {
+                window.autocompletion = '';
+                window.suggestionIdx = data.idx;
+            }
+            let currentAutocompletion = typeof(window.autocompletion) === 'undefined' || window.autocompletion == 'undefined' ? '' : window.autocompletion;
+            
             // Get autocompleted text
             let partial_reply = data.partial_reply;
             
@@ -107,9 +138,23 @@ export default function Conversation({next}) {
             // if (re.lastIndex > 0) completion = completion.substring(0, re.lastIndex);
 
             // Store autocompleted text
-            currentAutocompletion += partial_reply;
+            if (partial_reply != '[EOS]') {
+                currentAutocompletion += partial_reply;
+            } else {
+                player.set('showSuggestion', currentAutocompletion);
+                window.requestRewrite = false;
+            }
 
-            window.autocompletion = currentAutocompletion;
+            if (currentAutocompletion.slice(0, 4).toLowerCase() == 'you:') {
+                currentAutocompletion = currentAutocompletion.slice(currentAutocompletion.indexOf(':')+1).trim();
+            }
+            
+            currentAutocompletion = currentAutocompletion.replace('PARTNER', 'partner');
+            
+            if (currentAutocompletion != 'undefined') {
+                window.autocompletion = currentAutocompletion;
+            }
+
 
             setAutocompleteOptions([currentAutocompletion]);
           };
@@ -121,16 +166,29 @@ export default function Conversation({next}) {
             game.set(typingChannel, updateTypingStatus(participantIdx, false));
 
             // Send a message to the Python server asking for an autocompletion
-            if (window.autocompletion === undefined) {
-                window.autocompletion = '';
-                window.nlpServer.send(JSON.stringify({
-                    command: 'autocomplete',
-                    pairId: player.id,
-                    incomplete_msg: valueRef.current
-                }));
-            }
+            // if (window.autocompletion === undefined && window.canRequestAutocomplete == true) {
+            //     window.autocompletion = '';
+            //     wsSend(JSON.stringify({
+            //         command: 'autocomplete',
+            //         pairId: player.id,
+            //         incomplete_msg: valueRef.current
+            //     }));
+            // }
 
         }, 5 * 1000);
+
+        // const histMsgs = messages.length > 1 ? [messages[0], messages[1]] : [{},{}];
+        // histMsgs[0].personId = -1;
+        // histMsgs[1].personId = -1;
+        // wsSend(JSON.stringify({
+        //     command: 'update_history',
+        //     pairId: player.id,
+        //     pairType: pairType,
+        //     topic: parseInt(topic.substring(1))-1,
+        //     topicAgree: opinionStrength,
+        //     history: histMsgs
+        // }), true);
+
 
         // This function is run to cleanup (remove) the infinite loop of generating autocompletions when this component is unmounted
         return () => clearInterval(interval); 
@@ -143,18 +201,25 @@ export default function Conversation({next}) {
             let firstFromSender = true;
             let lastSender = -1;
 
-            if (messages.length == 2) {
-                window.nlpServer.send(JSON.stringify({
-                    command: 'initialize_history',
-                    pairId: player.id,
-                    history: [messages[0].txt, messages[1].txt]
-                }));
-            }
+            const histMsgs = messages.length > 1 ? [messages[0], messages[1]] : [{},{}];
+            histMsgs[0].personId = -1;
+            histMsgs[1].personId = -1;
+
+            // if (messages.length == 2) {
+            //     wsSend(JSON.stringify({
+            //         command: 'update_history',
+            //         pairId: player.id,
+            //         pairType: pairType,
+            //         topic: parseInt(topic.substring(1))-1,
+            //         topicAgree: opinionStrength,
+            //         history: histMsgs
+            //     }), true);
+            // }
 
             for (const msg of messages) {
                 
                 firstFromSender = lastSender != msg.sender;
-                lastSender = msg.sender
+                lastSender =  { ...msg }.sender
 
                 let senderTxt = '';
                 if (msg.sender == playerId) {
@@ -185,11 +250,63 @@ export default function Conversation({next}) {
             }
             let newMsgCount = msgIdx;
             if (newMsgCount > msgCount) {
-                msgCount = newMsgCount;
+                const newMsgs = messages.slice(msgCount - newMsgCount);
+                
+                setMsgCount(newMsgCount);
+                if (newMsgCount > playerMsgCount) {
+                    player.set('msgCount', newMsgCount);
+                    for (const msg of newMsgs) {
+                        let personId = 1;
+                        if (msg.sender == playerId) personId = 0;
+                        else if (msg.sender == -1) personId = -1;
+                        msg.personId = personId;
+    
+                        wsSend(JSON.stringify({
+                            command: 'update_history',
+                            pairId: player.id,
+                            pairType: pairType,
+                            personId: personId,
+                            msg: msg,
+                            topic: parseInt(topic.substring(1))-1,
+                            topicAgree: opinionStrength
+                        }), true);
+                    }
+                }
                 setMsgsUI(uiElems);
             }
         }
     }, [messages]);
+
+    useEffect(() => {
+        if (
+            playerMsgCount > 0
+            && messages.length > 0
+            && messages[messages.length - 1].sender != playerId
+            && messages[messages.length - 1].sender != -1
+            && currentStage != 'cooperationDiscussion'
+            && gameParams.treatmentType == 'suggestion'
+        ){
+            // Send a message to the Python server asking for an autocompletion if...
+            // - We receive a message from the partner
+            // - The last message was sufficiently long?
+            // - There's been a long pause
+            // - We are in the main conversation step (not the bonus discussion)
+            window.autocompletion = '';
+            if (rngPerMessage <= gameParams.suggestionProbability) {
+                TimerMixin.setTimeout(() => {
+                    wsSend(JSON.stringify({
+                        command: 'autocomplete',
+                        pairId: player.id,
+                        incomplete_msg: valueRef.current
+                    }));
+                }, 5000);
+            }
+        } else {
+            window.autocompletion = '';
+            setAutocompleteOptions(['']);
+        }
+        setRngPerMessage(Math.random());
+    }, [playerMsgCount]);
 
     useEffect(() => {
         if (pairTypingStatus[partnerIdx] == true) {
@@ -197,7 +314,14 @@ export default function Conversation({next}) {
         } else {
             setTypingIndicator(null);
         }
-    }, [pairTypingStatus])
+    }, [pairTypingStatus]);
+
+    useEffect(() => {
+        const el = document.querySelector('textarea');
+        if (el) {
+            el.style.height = "";el.style.height = el.scrollHeight + "px"   
+        }
+    }, [text]);
     
     // Process sending a message to the partner
     function handleSend() {
@@ -206,6 +330,83 @@ export default function Conversation({next}) {
             sentTime: 'just now',
             txt: text
         }]);
+
+        setAutocompleteOptions(['']);
+        setText('');
+        setEditingMsg(false);
+        window.canRequestAutocomplete = true;
+        window.autocompletion = undefined;
+
+        game.set(typingChannel, updateTypingStatus(participantIdx, false));
+    }
+
+    function handleScheduleSend() {
+
+        const updatedMessageList = [...messages, {
+            sender: playerId,
+            sentTime: 'just now',
+            txt: text,
+        }];
+
+        for(const msg of updatedMessageList) {
+            let personId = 1;
+            if (msg.sender == playerId) personId = 0;
+            else if (msg.sender == -1) personId = -1;
+            msg.personId = personId;
+        }
+
+        updatedMessageList[0].personId = -1;
+        updatedMessageList[1].personId = -1;
+
+        wsSend(JSON.stringify({
+            command: 'rewrite',
+            pairId: player.id,
+            pairType: pairType,
+            history: updatedMessageList,
+            topic: parseInt(topic.substring(1))-1,
+            topicAgree: opinionStrength
+        }), true);
+        
+        window.requestRewrite = true;
+
+        player.set('msgUnderReview', text);
+        setEditingMsg(true);
+
+        // game.set(chatChannel, updatedMessageList);
+
+        // setAutocompleteOptions(['']);
+        // setText('');
+        // window.canRequestAutocomplete = true;
+        // window.autocompletion = undefined;
+
+        game.set(typingChannel, updateTypingStatus(participantIdx, false));
+
+    }
+    function handleSendOriginal() {
+        game.set(chatChannel, [...messages, {
+            sender: playerId,
+            sentTime: 'just now',
+            txt: msgUnderReview
+        }]);
+
+        setText('');
+        setAutocompleteOptions(['']);
+        setEditingMsg(false);
+        player.set('msgUnderReview' ,'');
+
+        game.set(typingChannel, updateTypingStatus(participantIdx, false));
+    }
+    function handleSendRewrite() {
+        game.set(chatChannel, [...messages, {
+            sender: playerId,
+            sentTime: 'just now',
+            txt: autocompleteOptions[0]
+        }]);
+
+        setText('');
+        setAutocompleteOptions(['']);
+        setEditingMsg(false);
+        player.set('msgUnderReview' ,'');
 
         game.set(typingChannel, updateTypingStatus(participantIdx, false));
     }
@@ -220,11 +421,17 @@ export default function Conversation({next}) {
     }
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            setText('');
+        if (e.key === 'Enter' && !e.shiftKey) {
             handleSend();
+            e.preventDefault();
         }
-      }
+    }
+    const handleScheduleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            handleScheduleSend();
+            e.preventDefault();
+        }
+    }
 
     function handleButtonClick(evt) {
         // next();
@@ -267,6 +474,23 @@ export default function Conversation({next}) {
 
     const handleSuggestionClick = () => {
         setText(autocompleteOptions[0]);
+        setAutocompleteOptions(['']);
+        window.canRequestAutocomplete = false;
+        player.set('acceptSuggestion', autocompleteOptions[0]);
+    }
+    const handleRewriteClick = () => {
+        setText(autocompleteOptions[0]);
+        setAutocompleteOptions(['']);
+        setEditingMsg(true);
+        player.set('msgUnderReview' ,'');
+        player.set('editRewrite', autocompleteOptions[0]);
+    }
+    const handleOriginalClick = () => {
+        setText(msgUnderReview);
+        setAutocompleteOptions(['']);
+        setEditingMsg(true);
+        player.set('msgUnderReview' ,'');
+        player.set('editOriginal', msgUnderReview);
     }
 
     const groupTxt = playerGroup == partnerGroup ? 'the same' : 'a different';
@@ -296,22 +520,84 @@ export default function Conversation({next}) {
         <Typography level="body-md">
             Next, you will chat with your partner about an assigned topic.
         </Typography>
-        <Button onClick={goToChat}>Continue to Chat</Button>
+        <Button onClick={goToChat} sx={{mb: 4}}>Continue to Chat</Button>
     </Stack>;
 
     const skipButtonUI = window.location.hostname == 'localhost'
         ? <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}><Button sx={{ my: 2 }} onClick={handleButtonClick}>(Development Only) Skip</Button></Box>
         : '';
 
-    const suggestionClass = autocompleteOptions[0].length > 0 ? 'msgSend treatment' : 'msgSend treatment hidden';
-    const autocompleteUI = <div className={suggestionClass}>
-        <span>Suggestion (click to copy)</span>
-        <div className="input-wrapper">
-            {/* <textarea value={autocompleteOptions[0]}></textarea> */}
-            <div onClick={handleSuggestionClick}>{autocompleteOptions[0]}</div>
-        </div>
-        <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+    const suggestionClass = autocompleteOptions[0].length > 0 && autocompleteOptions[0] != 'undefined' ? 'msgSend treatment' : 'msgSend treatment hidden';
+    
+    let autocompleteUI = '';
+    let rewriteUI = '';
+    let sendButtonUI = <IconButton variant="plain" onClick={handleSend}>
+        <SendRounded />
+    </IconButton>;
+
+    let keyDownHandler = handleKeyDown; 
+
+    if (gameParams.treatmentType == 'suggestion') {
+        autocompleteUI = <div className={suggestionClass}>
+            <span onClick={handleSuggestionClick}>Suggestion (click to copy)</span>
+            <div className="input-wrapper">
+                {/* <textarea value={autocompleteOptions[0]}></textarea> */}
+                <div onClick={handleSuggestionClick}>{autocompleteOptions[0]}</div>
+            </div>
+            <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+        </div>;
+    } else if (gameParams.treatmentType == 'rewrite' && !editingMsg && rngPerMessage <= gameParams.suggestionProbability) {
+        rewriteUI = <div className={suggestionClass}>
+            <span onClick={handleSuggestionClick}>Suggestion (click to copy)</span>
+            <div className="input-wrapper">
+                {/* <textarea value={autocompleteOptions[0]}></textarea> */}
+                <div onClick={handleSuggestionClick}>{autocompleteOptions[0]}</div>
+            </div>
+            <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+        </div>;
+        sendButtonUI = <IconButton variant="plain" onClick={handleScheduleSend}>
+            <ScheduleSendRounded />
+        </IconButton>;
+        keyDownHandler = handleScheduleKeyDown; 
+    }
+
+    let msgSendUI = <div className='msgSend'>
+        <Hint options={autocompleteOptions} allowTabFill={true} onFill={handleAutocompleteFill}>
+            <textarea rows={1} value={text} onChange={handleChange} onKeyDown={keyDownHandler} className='hintedText' placeholder='Type a message here'></textarea>
+            {/* <input type="text" placeholder="Type a message here" value={text} onChange={handleChange} onKeyDown={handleKeyDown}/> */}
+        </Hint>
+        {sendButtonUI}
     </div>;
+    
+    if (msgUnderReview.length > 0 && autocompleteOptions[0].length > 0 && autocompleteOptions[0] != 'undefined' ) {
+        msgSendUI = <div className='msgSend treatment original'>
+            <div id="rewriteHint">pick a<br />message</div>
+            <span onClick={handleOriginalClick}>Original message </span>
+            <div className="input-wrapper">
+                <div onClick={handleOriginalClick}>{msgUnderReview}</div>
+            </div>
+            <IconButton variant="plain" onClick={handleSendOriginal}>
+                <SendRounded />
+            </IconButton>
+        </div>;
+        rewriteUI = <div className='msgSend treatment'>
+            <span onClick={handleRewriteClick}>Suggested rephrasing (click to edit)</span>
+            <div className="input-wrapper">
+                {/* <textarea value={autocompleteOptions[0]}></textarea> */}
+                <div onClick={handleRewriteClick}>{autocompleteOptions[0]}</div>
+            </div>
+            <IconButton variant="plain" onClick={handleSendRewrite}>
+                <SendRounded />
+            </IconButton>
+        </div>;
+    }
+
+    if (window.requestRewrite) {
+        msgSendUI = <div className='msgSend'>
+            Analyzing message...
+        </div>;
+        rewriteUI = '';
+    }
 
     const chatUI = <Stack sx={{
         maxWidth: {
@@ -325,7 +611,7 @@ export default function Conversation({next}) {
        Chat
         </Typography>
         <Typography level="body-md" textAlign="center">{msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)} remaining</Typography>
-        <MainContainer>
+        <MainContainer style={{overflow: 'visible'}}>
             <ChatContainer style={{height: '25rem'}}>       
                 <MessageList typingIndicator={typingIndicator}>
                     {msgsUI}
@@ -336,14 +622,8 @@ export default function Conversation({next}) {
                     {/* </MessageInput> */}
                 
             </ChatContainer>
-            <div className='msgSend'>
-                <Hint options={autocompleteOptions} allowTabFill={true} onFill={handleAutocompleteFill}>
-                    <input type="text" placeholder="Type a message here" value={text} onChange={handleChange} onKeyDown={handleKeyDown}/>
-                </Hint>
-                <IconButton variant="plain" onClick={handleSend}>
-                    <SendRoundedIcon />
-                </IconButton>
-            </div>
+            {msgSendUI}
+            {rewriteUI}
             {autocompleteUI}
         </MainContainer>
         {skipButtonUI}

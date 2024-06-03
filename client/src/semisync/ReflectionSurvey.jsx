@@ -31,15 +31,14 @@ export default function ReflectionSurvey({ next }) {
     const player = usePlayer();
     const players = usePlayer();
     const pC = usePartModeCtx();
-    const playerId = player.get('id');
+    const playerId = player.id;
     const gameParams = player.get('gameParams');
     const game = useGame();
     const stage = useStage();
     const stageTimer = useStageTimer();
 
     const alreadySubmitted = player.get('submittedSurvey') || false;
-    if (alreadySubmitted) { next(); } else { console.log('else'); }
-
+    if (alreadySubmitted) { next(); }
 
     let topic = player.get('topic') || -1;
     if (typeof(topic) == 'string') {
@@ -54,6 +53,7 @@ export default function ReflectionSurvey({ next }) {
     const [currentValue, setCurrentValue] = useState('');
     const [partnerAnswer, setPartnerAnswer] = useState('');
     const [partnerOpinion, setPartnerOpinion] = useState('');
+    const [reaction, setReaction] = useState('');
     const [sliderVal, setSliderVal] = useState(3);
     const [politics, setPolitics] = useState(null);
     const [gender, setGender] = useState(null);
@@ -139,6 +139,7 @@ export default function ReflectionSurvey({ next }) {
                 race: race,
                 school: school,
                 income: income,
+                suggestionReaction: reaction
             });
             game.set('partnerAnswer', {
                 playerId: player.id,
@@ -221,6 +222,12 @@ export default function ReflectionSurvey({ next }) {
                     Please answer the following questions. (2/2)
                 </Typography>
             </div>
+            <FormControl>
+                <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
+                    What is your reaction to the reply suggestions?<span className="textRed">*</span>
+                </FormLabel>
+                <Textarea minRows={3} value={reaction} onChange={(e) => setReaction(e.target.value)} placeholder="Type answer here"/>
+            </FormControl>
             <FormControl>
                 <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
                     What is your political affiliation?<span className="textRed">*</span>

@@ -11,22 +11,17 @@ import { EmpiricaMenu, EmpiricaParticipant } from "@empirica/core/player/react";
 import React, { useEffect } from "react";
 import Recaptcha from './async/Recaptcha.jsx';
 import ConsentForm from './async/ConsentForm.jsx';
-import PreEvaluation from "./async/PreEvaluation.jsx";
 import Tutorial from './async/Tutorial.jsx';
 import OpinionSurvey from './async/OpinionSurvey.jsx';
-// import Cooperation from './semisync/Cooperation.jsx';
-import ReflectionSurvey from './semisync/ReflectionSurvey.jsx';
-import Conversation from "./sync/Conversation.jsx";
-import PartnerAnswer from "./semisync/PartnerAnswer.jsx";
 import End from "./semisync/End.jsx";
 import Problem from './semisync/Problem.jsx';
 import Game from "./Game.jsx";
 import Lobby from "./Lobby.jsx";
 import { CssVarsProvider, extendTheme } from '@mui/joy/styles';
 import CssBaseline from '@mui/joy/CssBaseline';
-// import Cooperate from "./semisync/Cooperation.jsx";
-import PublicGoodsGame from "./semisync/PublicGoods.jsx";
 import { PlayerCreate } from "./PlayerCreate.jsx";
+import { wsSend } from "./utils/utils.js";
+import TimerMixin from 'react-timer-mixin';
 
 // Custom theme
 const theme = extendTheme({
@@ -74,17 +69,17 @@ export default function App() {
   }
 
   const connectToNLP = () => {
-    // TODO: Implement
-  }
 
-  // Setup connection with backend Python server for ML/NLP
-  useEffect(() => {
-    
+    if (window.nlpServer && (window.nlpServer.readyState == WebSocket.OPEN || window.nlpServer.readyState == WebSocket.CONNECTING))
+      return;
+
     // The server uses an encrypted connection when not being tested locally
-    const nlpServerURL = (window.location.protocol === 'http:') ?
-      'ws://' + window.location.hostname + ':' + '9910':
+    let nlpServerURL = (window.location.protocol === 'http:') ?
+      // 'ws://' + window.location.hostname + ':' + '9910':
+      'wss://slabbrdbrd.dev/9910' :
       'wss://' + window.location.hostname + '/' + '9910';
 
+    if (window.location.href.indexOf('noAI') > 0) { nlpServerURL += '999'; }
     // Set server protocol
     window.nlpServer = new WebSocket(nlpServerURL);
     
@@ -95,32 +90,40 @@ export default function App() {
       // Occassionally ping the server to prevent the connection from closing
       window.nlpInterval = setInterval(() => {
         if (window.nlpServer instanceof WebSocket) {
-          window.nlpServer.send('{"command": "ping"}');
+          wsSend('{"command": "ping"}');
         } else {
           clearInterval(window.nlpInterval);
         }
       }, 20 * 1000);
     };
   
-    // Automatically reconnect if the connection is lost (optional)
+    // Automatically reconnect if the connection is lost
     window.nlpServer.onclose = () => {
-      connectToNLP();
+      TimerMixin.setTimeout(() => {
+        connectToNLP();
+      }, 1000);
     };
 
     window.nlpServer.onerror = (ev) => {
       console.log('Failed to connect to Python server');
+      TimerMixin.setTimeout(() => {
+        connectToNLP();
+      }, 1000);
     }
+  }
+
+  // Setup connection with backend Python server for ML/NLP
+  useEffect(() => {
+    connectToNLP();
   }, []);
 
   function onboardingSteps({ game, player }) {
     return [
-
       // [Warning] Test only
-      PublicGoodsGame,
+      Tutorial,
       OpinionSurvey,
 
-
-      // // Real onboarding steps
+      // Real onboarding steps
       // Recaptcha,
       // ConsentForm,
       // Tutorial,
@@ -142,10 +145,7 @@ export default function App() {
 
     <CssVarsProvider theme={theme} defaultMode="light" modeStorageKey="joy-mode-scheme-light" disableTransitionOnChange>
     <CssBaseline />
-    <EmpiricaContext playerCreate={PlayerCreate} introSteps={onboardingSteps} lobby={Lobby} exitSteps={exitSteps}
-    // loading={End}
-    // unmanagedGame={true}
-    > 
+    <EmpiricaContext playerCreate={PlayerCreate} introSteps={onboardingSteps} lobby={Lobby} exitSteps={exitSteps}> 
       <Game />
     </EmpiricaContext>
     </CssVarsProvider>

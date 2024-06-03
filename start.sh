@@ -57,16 +57,16 @@ else
 fi
 
 # Run Python
-. "${PYENV_ROOT}/versions/${VENV}/bin/activate"
-{ python3 "$current_dir/nlp/nlp.py" 1> "$current_dir/log_python.log" 2>&1 & }
-pid2=$!
-echo "Python running with PID $pid2";
+# . "${PYENV_ROOT}/versions/${VENV}/bin/activate"
+# { python3 "$current_dir/nlp/nlp.py" 1> "$current_dir/log_python.log" 2>&1 & }
+# pid2=$!
+# echo "Python running with PID $pid2";
 
 # Stop all child processes when we stop this script
 function cleanup()
 {
-    kill -9 $pid1 $pid2;
-    echo "$pid1 and $pid2 stopped";
+    kill -9 $pid1;
+    echo "$pid1 stopped";
     rm log_*
     rm RUNNING_PID
     echo ''

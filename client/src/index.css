@@ -86,10 +86,11 @@ textarea:focus {
   display: flex;
   justify-content: center;
   background: #fff;
-  padding: 1rem 0 0 0;
+  padding: 1rem 0 1rem 0;
+  position: relative;
 }
 
-.msgSend input {
+.msgSend input, .msgSend textarea {
   border-radius: 1rem;
   border: none !important;
   background-color: #f5f5f5;
@@ -98,6 +99,21 @@ textarea:focus {
   flex-grow: 1;
   outline: none !important;
   box-shadow: none !important;
+}
+.msgSend textarea {
+  resize: none;
+  position: relative;
+}
+.msgSend .rah-input-wrapper::after {
+  content: 'Shift + Enter for new line';
+  position: absolute;
+  bottom: -1em;
+  left: 0em;
+  color: gray;
+  display: block;
+  z-index: 5;
+  font-size: 0.7em;
+  margin: -0.5em 0 0 1em;
 }
 
 .botMsg {
@@ -123,9 +139,23 @@ textarea:focus {
 .msgSend.treatment {
   flex-wrap: wrap;
   align-items: baseline;
+  text-align: left;
+}
+.msgSend.treatment div {
+  transition: opacity 0.4s ease-in, transform 0.2s ease-in;
+  transform-origin: top;
+  cursor: pointer;
+}
+.msgSend.treatment button {
+  background: none !important;
+  cursor: initial !important;
 }
 .msgSend.treatment.hidden {
-  opacity: 0.1;
+  transform: scaleY(0);
+}
+.msgSend.treatment.hidden div {
+  transform: scaleY(0);
+  opacity: 0;
 }
 .msgSend.treatment textarea, .msgSend.treatment .input-wrapper div {
   width: 342px;
@@ -185,6 +215,36 @@ textarea:focus {
   z-index: 3;
   display: block;
   border-radius: 100%;
+}
+.msgSend.treatment.example {
+  order: initial;
+}
+.msgSend.treatment.original .input-wrapper:before,  .msgSend.treatment.original .input-wrapper div {
+  background-color: rgb(246, 246, 246);
+  color: rgb(112, 112, 112);
+}
+#rewriteHint {
+  position: absolute;
+  bottom: -2em;
+  left: -6em;
+  z-index: 1;
+  text-align: center;
+  transform: rotate(-25deg);
+  padding: 0 2em 0 0;
+  opacity: 0.8;
+}
+#rewriteHint::after {
+  content: '{';
+  /* width: 2em; */
+  /* height: 2em; */
+  /* border: solid 1px  */
+  display: block;
+  position: absolute;
+  font-size: 3em;
+  top: 0.25em;
+  right: 0;
+  z-index: 2;
+  transform: rotate(25deg);
 }
 
 /* Progress List */

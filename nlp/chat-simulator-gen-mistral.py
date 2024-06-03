@@ -1,4 +1,3 @@
-
 # Imports
 import os
 import sys
@@ -209,8 +208,7 @@ for msg in sampleMsgs:
             "content": prompt
         }]
         
-        # print('Prompt: ' + prompt, flush=True)
-        print ("YOU (AI): ", end='')
+        print ("YOU (AI): ")
         
         has_space = False
         reply = ''
@@ -239,15 +237,8 @@ for msg in sampleMsgs:
         # for partial_reply in predict(prompt):
         #     print(partial_reply, end='', flush=True)
 
-        trimming = True
 
         for partial_reply in predict(prompt):
-
-            if trimming:
-                if partial_reply.find('\n') < 0:
-                    trimming = False
-                partial_reply = partial_reply.replace('\n', '')
-                
             if lastMsgNoCaps:
                 partial_reply = partial_reply.lower()
             
@@ -266,20 +257,15 @@ for msg in sampleMsgs:
                     wait_for_closure = True
                 elif (not re.search(r'[0-9]+[A-Za-z]|[A-Za-z]+[0-9]', word) and word.isascii()):
                     print(word, end='', flush=True)
-                    if re.search(r'[^A-Z]\w+\.|\?|\!', partial_reply):
-                        # Last word of sentence
-                        word = ''
-                        break
                 else:
                     break
 
                 word = ''
                 sys.stdout.flush()
-            if re.search(r'[^A-Z]\w+\.|\?|\!', partial_reply):
-                # Last word of sentence
+            elif re.search(r'[^A-Z]\w+\.|\?|\!', partial_reply):
+                # Last word
                 print(word, end='', flush=True)
                 word = ''
-                break
         print ("\n", flush=True)
         idx += 1
 

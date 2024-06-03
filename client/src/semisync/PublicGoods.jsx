@@ -207,12 +207,12 @@ export default function PublicGoodsGame({next}) {
                     </Typography>
                     <List component="ul" marker="disc">
                         <ListItem>Keep your bonus</ListItem>
-                        <ListItem>Pay to share some with your partner</ListItem>
+                        <ListItem>Pay to share it with your partner</ListItem>
                     </List>
                     <Typography level="body-md" textAlign="center">
                     The effect on your partner is {gameParams.shareMultiplier}x the amount you share.
                     </Typography>
-                <Typography level="body-md">Would you like to keep or share?</Typography>
+                <Typography level="body-md">Would you like to keep or share the $2.00?</Typography>
                 <RadioGroup aria-label="Share type" name="shareType" defaultValue="Keep" onChange={(e)=>setShareType(e.target.value)}>
                         <List
                             sx={{

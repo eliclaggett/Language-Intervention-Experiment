@@ -11,6 +11,10 @@ ssh -i deployment/server.pem $SERVER_SSH -tt bash << HERE
  exit 
 HERE
 
+# Run NLP Server
+{ ./deployment/run_nlp.command &> log_nlp.log & }
+pid2=$!
+
 # Stop all child processes when we stop this script
 function cleanup()
 {

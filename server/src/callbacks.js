@@ -37,26 +37,29 @@ const gameParams = {
   // Payouts
   task1Pay: 3,
   task2Pay: 3,
-  bonus: 2,
+  bonus: 3,
   maxBonusShare: 2, // Used in consent form, tutorial, and economic game to calculate bonus range
-  shareMultiplier: 2,
+  shareMultiplier: 1.5,
   
   // Experiment parameters
   samplingType: 'within', // within, between (passed pre-eval or not)
+  treatmentType: 'suggestion', // completion, suggestion, rewrite, none
+  suggestionProbability: 0.75,
 
   // Timing
   chatTime: 10,
+  // chatTime: 99, // TEST ONLY
   followupDelay1: 3,
   followupDelay2: 3,
 
-  cooperationDiscussionTime: 0,
+  cooperationDiscussionTime: 3,
   cooperationTime: 3,
   reflectionSurveyTime: 7,
   partnerAnswerTime: 2,
 
   // Misc. global variables
-  participantCounter: 0
 };
+
 const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/' + process.env['EXPERIMENT_NAME'] + '/texts.json'))
 botTexts['preEvalMessages'] = botTexts['messagesEvaluation'][2]
 
@@ -72,12 +75,12 @@ Empirica.on("game", (ctx, { game }) => {
   game.set('gameParams', gameParams);
   game.set('lobbyDuration', game.lobbyConfig.duration);
   game.set('submitCooperationDecision', false);
-
+  game.set('currentStage', 'onboarding');
 });
 
 function startChatbotPrompting(game) {
   let currentMinute = 0;
-
+  game.set('currentStage', 'mainDiscussion');
   for (const k of Object.keys(chatChannelTopics)) {
     const topic = parseInt(chatChannelTopics[k].substring(1)) - 1;
 
@@ -121,6 +124,7 @@ function startChatbotPrompting(game) {
         }});
         const msgs = game.get(k) || [];
         game.set(k, [...msgs, ...cooperationDiscussionMsgs]);
+        game.set('currentStage', 'cooperationDiscussion')
       }
 
       if (nextPrompt.length > 0) {
@@ -174,6 +178,7 @@ Empirica.onGameStart(({ game }) => {
 
 
   const [pairs, topics, groups] = makePairs(players, gameParams['samplingType']);
+
   gamePairs = pairs;
   gameGroups = groups;
 
@@ -200,6 +205,7 @@ Empirica.onGameStart(({ game }) => {
     player.set('completionCode', completionCodes['task2']);
     player.set('group', groups[player.id]);
     player.set('partnerGroup', groups[partner.id]);
+    player.set('msgCount', 2);
 
     partner.set('chatChannel', chatChannel);
     chatChannelTopics[chatChannel] = topics[player.id];
@@ -212,6 +218,7 @@ Empirica.onGameStart(({ game }) => {
     partner.set('partnerGroup', groups[player.id]);
 
     player.set('startTask2', true);
+    player.set('msgUnderReview', '');
   }
 
   startChatbotPrompting(game);
@@ -245,7 +252,6 @@ Empirica.on("player", (ctx, { player, _ }) => {
 
   player.set('gameParams', gameParams);
   player.set('isTyping', false);
-  player.set('id', gameParams.participantCounter++);
   player.set('partner', -1);
   player.set('partnerFinished', false);
   player.set('passEval', true);

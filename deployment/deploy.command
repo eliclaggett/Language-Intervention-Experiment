@@ -17,6 +17,7 @@ sftp -b - -i deployment/server.pem $SERVER_SSH <<EOF
 	put "$parent_path/.env_prod" "$SERVER_PATH/.env"
 	put "$parent_path/texts.json" "$SERVER_PATH/texts.json"
 	put "$parent_path/nlp/nlp.py" "$SERVER_PATH/nlp/nlp.py"
+	put -r "$parent_path/nlp/util" "$SERVER_PATH/nlp"
 	put "$parent_path/deployment/install_custom_empirica.sh" "$SERVER_PATH/../install_custom_empirica.sh"
 	exit
 EOF
