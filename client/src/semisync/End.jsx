@@ -34,6 +34,8 @@ export default function End({next}) {
     const [currentValue, setCurrentValue] = useState('');
     const [feedback, setFeedback] = useState('');
     const [open, setOpen] = useState(false);
+    const [feedbackBtnClass, setFeedbackBtnClass] = useState('');
+    const [feedbackTxt, setFeedbackTxt] = useState('Send Feedback');
 
     const surveyQuestions = [
         "I would want my kids to be taught evolution as a fact of biology",
@@ -61,7 +63,7 @@ export default function End({next}) {
         totalPay += gameParams.task2Pay;
     }
     let bonusPayUI = '';
-    const cooperationDecision = player.get('submitCooperationDecision');
+    const cooperationDecision = player.get('submitCooperationDecision') || 0;
     const partnerCooperationDecision = player.get('partnerCooperationDecision');
     const partnerCooperationType = player.get('partnerCooperationType');
 
@@ -101,6 +103,8 @@ export default function End({next}) {
 
     function handleButtonClick(evt) {
         player.set('feedback', feedback);
+        setFeedbackBtnClass('success');
+        setFeedbackTxt('Feedback received! Thank you so much!');
     }
 
 
@@ -108,10 +112,10 @@ export default function End({next}) {
     let myContributionText = '';
     let partnerContributionText = '';
     if (cooperationDecision > 0) {
-        myContributionText = <ListItem>Subtract {formatMoney(cooperationDecision)} to share with your partner.</ListItem>
+        myContributionText = <ListItem>Subtract {formatMoney(cooperationDecision)} to share with your partner</ListItem>
     }
     if (partnerCooperationDecision > 0) {
-        partnerContributionText = <ListItem>Add {formatMoney(partnerCooperationDecision * 2)} because your partner shared with you.</ListItem>;
+        partnerContributionText = <ListItem>Add {formatMoney(partnerCooperationDecision * 2)} for the amount your partner shared</ListItem>;
     }
 
     if (!startedTask2) {
@@ -240,7 +244,7 @@ export default function End({next}) {
                     Your bonus was calculated as follows:
                 </Typography>
                 <List component='ol' marker='decimal'>
-                    <ListItem>Default bonus of {formatMoney(gameParams.bonus)}.</ListItem>
+                    <ListItem>Default bonus of {formatMoney(gameParams.bonus)}</ListItem>
                     {myContributionText}
                     {partnerContributionText}
                 </List>
@@ -275,14 +279,14 @@ export default function End({next}) {
                 {paymentUI}
 
                 {startedTask2 ? <div>
-                <Typography level="body-md">
-                If you have time, please tell us about your experience participating in the study and list any feedback here, too.
+                <Typography level="body-md" sx={{pb: 2}}>
+                If you have extra time, please tell us about your experience participating in the study and list any feedback here, too.
                 </Typography>
                 <FormControl>
                     <Textarea placeholder="Type your feedback here..." minRows={3} value={feedback} onChange={(e) => setFeedback(e.target.value)}></Textarea>
                 </FormControl>
                 <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}>
-                    <Button sx={{ my: 2 }} onClick={handleButtonClick}>Send Feedback</Button>
+                    <Button sx={{ my: 2 }} onClick={handleButtonClick} className={feedbackBtnClass}>{feedbackTxt}</Button>
                 </Box>
                 </div>
                 : ''}

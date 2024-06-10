@@ -33,6 +33,13 @@ export default function Cooperate({next}) {
     ]
     const [prompt, setPrompt] = useState(surveyQuestions[0]);
     const maxSteps = surveyQuestions.length;
+    let timeLeftTxt = '';
+    if (stage.get('name') == 'semi_asynchronous_steps') {
+        timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
+        timeLeftTxt = <span>{msToTime(timeLeft)} remaining to finish the survey.<br /></span>;
+    } else {
+        timeLeftTxt = <span>{msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)}</span>;
+    }
 
     function handleRadioButtonChange(evt) {
         setCurrentValue(evt.target.value);

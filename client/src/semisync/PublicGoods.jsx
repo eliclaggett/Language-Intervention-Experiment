@@ -20,13 +20,14 @@ import { ChartsTooltip } from '@mui/x-charts';
 import WarningIcon from '@mui/icons-material/Warning';
 import { Alert, Button, Box, Container, FormControl, FormLabel, Grid, Typography, Stack, FormHelperText, List, ListItem, Radio, RadioGroup, Slider, Textarea } from '@mui/joy';
 import { useState } from 'react';
-import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
+import { usePlayer, useGame, useStageTimer, useStage } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 
 // TODO: Remove next?
 export default function PublicGoodsGame({next}) {
 
     const player = usePlayer();
+    const stage = useStage();
     const stageTimer = useStageTimer();
     const gameParams = player.get('gameParams');
     const game = useGame();
@@ -55,6 +56,12 @@ export default function PublicGoodsGame({next}) {
     const [prompt, setPrompt] = useState(surveyQuestions[0]);
     const maxSteps = surveyQuestions.length;
 
+    let timeLeftTxt = '';
+    if (stage.get('name') == 'semi_asynchronous_steps') {
+        let timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
+        timeLeftTxt = <span style={{color:'rgb(102, 93, 245)'}}>{msToTime(timeLeft)} remaining to finish the survey.<br /></span>;
+    }
+    
     function handleRadioButtonChange(evt) {
         setCurrentValue(evt.target.value);
         setRadioButtonVals(radioButtonVals => ({
@@ -120,8 +127,8 @@ export default function PublicGoodsGame({next}) {
     const defaultPartner = gameParams.bonus;
     const currentPlayer = defaultPlayer - shareAmt;
     let currentPartner = defaultPartner;
-    if (shareType == 'Share')   currentPartner += shareAmt*2;
-    else                        currentPartner -= shareAmt*2;
+    if (shareType == 'Share')   currentPartner += shareAmt*gameParams.shareMultiplier;
+    else                        currentPartner -= shareAmt*gameParams.shareMultiplier;
 
 
     const labels = [['Original', formatMoney(defaultPlayer)], ['Current',formatMoney(currentPlayer)]];
@@ -199,8 +206,7 @@ export default function PublicGoodsGame({next}) {
                     Bonus Allocation
                 </Typography>
                 <Typography level="body-md" textAlign="center">
-                    {msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)} remaining.
-                    <br/><br/>
+                    {timeLeftTxt}<br/>
                     You have been awarded a {formatMoney(gameParams.bonus)} bonus. Please decide how you would like to allocate your bonus payment.
                     
                     You may:
@@ -212,7 +218,7 @@ export default function PublicGoodsGame({next}) {
                     <Typography level="body-md" textAlign="center">
                     The effect on your partner is {gameParams.shareMultiplier}x the amount you share.
                     </Typography>
-                <Typography level="body-md">Would you like to keep or share the $2.00?</Typography>
+                <Typography level="body-md">Would you like to keep or share your bonus?</Typography>
                 <RadioGroup aria-label="Share type" name="shareType" defaultValue="Keep" onChange={(e)=>setShareType(e.target.value)}>
                         <List
                             sx={{

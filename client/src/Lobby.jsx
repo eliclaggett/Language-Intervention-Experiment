@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { usePlayer, useGame } from "@empirica/core/player/classic/react";
 import { msToTime, formatMoney } from './utils/formatting';
 import { SendRounded, StarRounded } from '@mui/icons-material';
+import TaskInstructions from './components/TaskInstructions.jsx';
 
 export default function Lobby() {
 
@@ -40,7 +41,11 @@ export default function Lobby() {
     const diffMS = lobbyTimeout - now;
     // console.log(diffMS);
 
-    const [timeRemaining, setTimeRemaining] = useState('is being calculated');
+    const [timeRemaining, setTimeRemaining] = useState('Wait time is being calculated');
+    const[taskInstructionDisplay, setTaskInstructionDisplay] = useState('none');
+    const[lobbyDisplay, setLobbyDisplay] = useState('block');
+    const readInstructions = player.get('readChatFeatures') || false;
+    const[buttonDisplay, setButtonDisplay] = useState('flex');
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -49,66 +54,22 @@ export default function Lobby() {
 
             setTimeRemaining(msToTime(diffMS));
         }, 1000);
-    
-        return () => clearInterval(interval);
+        
+        return () => clearInterval(interval);        
       }, []);
 
     function handleClick(val) {
         // player.set('clickButton', {data: 'hi'});
         game.set('startLobby', true);
     }
-    let treatmentDescription = '';
 
-    if (gameParams.treatmentType == 'suggestion') {
-        treatmentDescription = <div>
-            <Typography level="h3" textAlign="">
-            <StarRounded style={{color: 'gold'}}/>Chat AI Features:
-            </Typography>
-            <Typography level="body-md" textAlign="left">
-            You may occasionally receive message suggestions below the input field. Please feel free to use them or ignore them. The suggestions will appear like this:
-            </Typography>
-
-            <div className='msgSend treatment example'>
-                <span>Suggestion (click to copy)</span>
-                <div className="input-wrapper">
-                    <div>Example suggested message</div>
-                </div>
-                <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
-            </div>
-        </div>;
-    } else if (gameParams.treatmentType == 'rewrite') {
-        // TODO: Implement tutorial for message rewrites
-        treatmentDescription = <div>
-            <Typography level="h3" textAlign="" sx={{pt: 4}}>
-            <StarRounded style={{color: 'gold'}}/>Chat AI Features:
-            </Typography>
-            <Typography level="body-md" textAlign="left">
-            You may occasionally receive AI suggestions to rephrase a message before you send it. Please feel free to use them or ignore them. The suggestions will appear like this, below the chat window:
-            </Typography>
-
-            <div className='msgSend treatment original'>
-                {/* <div id="rewriteHint">pick a<br />message</div> */}
-                <span>Original message </span>
-                <div className="input-wrapper">
-                    <div>'Example original message</div>
-                </div>
-                <IconButton variant="plain">
-                    <SendRounded />
-                </IconButton>
-            </div>
-            <div className='msgSend treatment example'>
-                <span>Suggested rephrasing (click to edit)</span>
-                <div className="input-wrapper">
-                    <div>Example suggested rephrasing</div>
-                </div>
-                <IconButton variant="plain">
-                    <SendRounded />
-                </IconButton>
-            </div>
-        </div>;
-    } else if (gameParams.treatmentType == 'completion') {
-        // TODO: Implement tutorial for message autocompletions
+    function showTaskInstructions() {
+        setTaskInstructionDisplay('block');
+        setLobbyDisplay('none');
+        setButtonDisplay('none');
     }
+
+    // console.log(taskInstructionDisplay);
 
     return (
         <Container maxWidth="100vw">
@@ -121,46 +82,23 @@ export default function Lobby() {
                 textAlign: 'center'
             }} gap={1} >
                 {/* <img src="images/undraw_chatting_re_j55r.svg" id="headerImg_recaptcha" /> */}
-                <Typography level="h1">
-                Almost there!<br />Prepare for the next task
-                </Typography>
-                <Typography level="body-md" textAlign="left">
-                We are waiting for all participants to finish onboarding. Then, you will be assigned a partner and
-                enter a chatroom with them.
-                </Typography>
-                <Typography level="body-md">
-                Maximum wait time {timeRemaining}
-                </Typography>
-
-                <Typography level="h3" textAlign="center" sx={{pt: 4}}>
-                Discussion About Assigned Topic ({gameParams.chatTime} min):
-                </Typography>
-                <Typography level="body-md" textAlign="left">
-                You will be given {gameParams.chatTime} minutes to work with your
-                partner and discuss each of your opinions about a specific topic.
-                Try to understand how and why your partner formed their opinion by
-                asking questions and comparing their answers to your own.
-                </Typography>
+                <div style={{display: readInstructions ? 'block' : lobbyDisplay}}>
+                    <Typography level="h1" sx={{pt:12}}>
+                    Almost there!<br />Prepare for the next task
+                    </Typography>
+                    <Typography level="body-md" textAlign="left">
+                    We are waiting for all participants to finish onboarding. Then, you will be assigned a partner and
+                    enter a chatroom with them.
+                    </Typography>
+                </div>
+                    <Button variant='outlined' onClick={showTaskInstructions} style={{display: readInstructions ? 'none' : buttonDisplay}}>Read Task Instructions</Button>
                 
-                {treatmentDescription}
-
-                {/* <Alert variant='solid' color='primary' startDecorator={<Star />} sx={{textAlign:'left'}}>
-                    Remember that you must complete the entire study to be eligible for the maximum payment.
-                </Alert> */}
-                {/* <Typography level="body-md" textAlign="left">
-                    Note:
-                </Typography> */}
-                <ul  style={{ listStyle: 'disc', margin: '0.5em 0', padding: '0 1.5em', textAlign: 'left'}}>
-                    <li>Remember that you must complete the entire study to be eligible for the maximum payment.</li>
-                    <li>Refrain from using offensive language. If your partner is
-                    abusive or unresponive, you can end the task by clicking the
-                    "Report Language" button below the chat window:</li>
-                </ul>
-                <Button variant='outlined' color="danger" sx={{
-                    flex: 0,
-                    width: '10rem',
-                    mx: 'auto',
-                    mb: '2rem'}}>Report Language</Button>
+                <Typography level="body-md" color='primary'>
+                {timeRemaining} wait time remaining...
+                </Typography>
+                <div style={{display: readInstructions ? 'none' : taskInstructionDisplay}}>
+                    <TaskInstructions/>
+                </div>
             </Stack>
         </Container>
         );

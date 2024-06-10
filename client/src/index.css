@@ -389,3 +389,33 @@ textarea:focus {
   transform: rotate(45deg);
   clip-path: polygon(0 0, 100% 100%, 0 100%);
 }
+
+.youLeftMsg .cs-message__header, .partnerLeftMsg .cs-message__header {
+  display: none;
+}
+.youLeftMsg .cs-message__content, .partnerLeftMsg .cs-message__content {
+  color: #a3a3a3 !important;
+  background: none;
+}
+.youLeftMsg .cs-message__html-content:after {
+  content: 'You left the chat'; 
+}
+.partnerLeftMsg .cs-message__html-content:after {
+  content: 'Your partner left the chat';
+}
+
+
+.small .MuiRadioGroup-root label p {
+  font-size: 0.8rem !important;
+}
+
+.MuiButton-root.success {
+  background-color: rgb(103, 215, 126) !important;
+  cursor: initial;
+}
+
+@media screen and (max-width: 1015px) {
+  .reflectionSurveyHeaderTxt::after {
+    content: ' Your chat log is provided at the bottom of the page for reference.'
+  }
+}

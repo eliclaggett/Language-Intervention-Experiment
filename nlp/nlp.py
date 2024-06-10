@@ -61,7 +61,7 @@ dialogue_acts = ['acknowledging my partner\'s opinions', 'asking a follow-up que
 prompt_next_da = 'You are an expert conversation analyzer. Here are the last few messages of a text chat between two users:\n\n"{{last_msgs}}"\n\nWhich of the following responses is the most appropriate for the next message? PICK ONE. These are your answer choices:\n{{response_str}}\nIf multiple of these strategies would be good, say "ANY".'
 
 # Yay, we know the next dialogue act
-prompt_generate_msg = 'Your task is to continue the discuss as the person labeled "YOU" in a text chat about {{convo_topic}}{{belief_str}}. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nReply to the last message sent by PARTNER{{dialogue_act}}. Do not respond to the person labeled MODERATOR. {{linguistic_techniques}}'
+prompt_generate_msg = 'Continue the discussion as the person labeled "YOU" in a text chat about {{convo_topic}}{{belief_str}}. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nReply to the last message sent by PARTNER{{dialogue_act}}. Do not respond to the person labeled MODERATOR. {{linguistic_techniques}}'
 
 # Experiments to improve naturalness
 prompt_generate_msg += """ Always speak in a natural tone. Respond with a maximum of two sentences and do not say hi after the conversation has already started!
@@ -76,7 +76,7 @@ For example:
 
 prompt_generate_completion = prompt_generate_msg + ' Start the reply with this unfinished sentence: "{{unfinished_sentence}}" and complete it.'
 
-prompt_rewrite_msg = 'You will be shown a conversation between two people and a moderator about {{convo_topic}}{{belief_str}}. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nRephrase the last message: "{{final_msg}}". {{linguistic_techniques}} Make sure that the rephrasing is consistent with the intent of the original message and doesn\'t add extra information. Change as few words as possible.'
+prompt_rewrite_msg = 'Here are the last few messages of a discussiona conversation between two people and a moderator about {{convo_topic}}{{belief_str}}:\n\n"{{last_msgs}}"\n\nRephrase the last message: "{{final_msg}}". {{linguistic_techniques}} Make sure that the rephrasing is consistent with the intent of the original message and doesn\'t add extra information. Change as few words as possible.'
 # Yay, we have generated a message
 
 # OPINION SOLICITER
@@ -98,9 +98,9 @@ def run_model(prompt, args, model_args={}, skip_prompt=True):
     print(prompt, flush=True)
     if model_name == 'openai':
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": "Your task is to simulate the user labeled \"YOU\" in the conversations shown to you."},
+                {"role": "system", "content": "Your task is to simulate the user labeled \"YOU\" in the conversations shown to you. Make your replies consistent with the emotional state of the person you're simulating and their attitude toward their conversation partner."},
                 {"role": "user", "content": prompt}
             ]
         )

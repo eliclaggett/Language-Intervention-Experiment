@@ -27,6 +27,7 @@ function cleanup()
 {
     # Cleanup child processes
     kill -SIGINT $pid1 $pid2
+    # kill -SIGINT $pid1
     rm log*
 
     ssh -o LogLevel=error -i ~/.ssh/eli-xps eli@eli-xps.lan.local.cmu.edu << EOF &> /dev/null

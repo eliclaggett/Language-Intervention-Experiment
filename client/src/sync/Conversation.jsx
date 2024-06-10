@@ -6,8 +6,8 @@
  * This ReactJS file displays a chat window for participants to discuss with each other about assigned topics.
  */
 import React,{ useState, useEffect, useRef } from 'react';
-import { Button, Box, Container, IconButton, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup } from '@mui/joy';
-import { PlayCircleRounded, PlaylistRemoveTwoTone, SmartToyOutlined, SendRounded, ScheduleSendRounded } from '@mui/icons-material';
+import { Alert, Button, Box, Container, IconButton, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup } from '@mui/joy';
+import { PlayCircleRounded, PlaylistRemoveTwoTone, SmartToyOutlined, SendRounded, ScheduleSendRounded, Warning, SentimentVerySatisfied, SentimentVerySatisfiedRounded, FastForwardRounded } from '@mui/icons-material';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 import { wsSend } from '../utils/utils.js';
@@ -23,34 +23,41 @@ import AcrossGroupGraphic from '../components/AcrossGroupGraphic.jsx';
 import { Hint } from'../utils/react-autocomplete-hint/dist/src/index.js'; // Use custom hint to show autocomplete suggestions as soon as they are generated
 // import { clearInterval } from 'timers';
 import TimerMixin from 'react-timer-mixin';
+import TaskInstructions from '../components/TaskInstructions.jsx';
 
 // TODO: Remove next?
 export default function Conversation({next}) {
 
     // const timerMixin = TimerMixin();
     const player = usePlayer();
+    const game = useGame();
     const playerId = player.id;
-    const playerMsgCount = player.get('msgCount') || 999;
+    const msgCount = player.get('msgCount') || 999;
+    const [playerMsgCount, setPlayerMsgCount] = useState(0);
     const gameParams = player.get('gameParams');
     const playerGroup = player.get('group') || 0;
     const partnerGroup = player.get('partnerGroup') || 0;
     const pairType = playerGroup == partnerGroup ? 0 : 1;
     const acknowledgedGroup = player.get('acknowledgeGroup') || false;
+    const readInstructions = player.get('readChatFeatures') || false;
     const msgUnderReview = player.get('msgUnderReview') || '';
     const [editingMsg, setEditingMsg] = useState(false);
     const [rngPerMessage, setRngPerMessage] = useState(0);
-
+    const earlyFinishTimeLeft = player.get('earlyFinishTime');
+    const conversationStartTime = game.get('conversationStartTime');
+    const cooperationDiscussionStartTime = game.get('cooperationDiscussionStartTime');
 
     const topic = player.get('topic') || 'q1';
     const opinionSurveyResponses = player.get('submitOpinionSurvey');
     const opinionStrength = opinionSurveyResponses ? opinionSurveyResponses[topic] : 0;
 
-    const game = useGame();
     const stageTimer = useStageTimer();
     const currentStage = game.get('currentStage');
 
+    const forceEarlyFinish = player.get('forceEarlyFinish');
     const [step, setStep] = useState(1);
     const [suggestionIdx, setSuggestionIdx] = useState(-1);
+    const [numMsgsSent, setNumMsgsSent] = useState(0);
     const [text, setText] = useState('');
     const [autocompleteOptions, setAutocompleteOptions] = useState(['']);
     const [radioButtonVals, setRadioButtonVals] = useState();
@@ -58,13 +65,15 @@ export default function Conversation({next}) {
     const [currentValue, setCurrentValue] = useState('');
     const [isTyping, setIsTyping] = React.useState(false);
     const [typingIndicator, setTypingIndicator] = React.useState(null);
-    const [reportPartnerText, setReportPartnerText] = useState('Report Language');
+    const [reportPartnerText, setReportPartnerText] = useState('Report Partner');
     const [reportPartnerStatus, setReportPartnerStatus] = useState(false);
+    const [skipDisplay, setSkipDisplay] = useState('none');
     // const [debouncedIsTyping, setDebouncedIsTyping] = React.useState(false);
 
 
     // Empirica message state
     const chatChannel = player.get('chatChannel');
+    // console.log(chatChannel.split('-')[2]);
     const typingChannel = player.get('typingChannel') || '';
     const messages = game.get(chatChannel) || [];
     let pairTypingStatus = game.get(typingChannel) || [false, false];
@@ -73,12 +82,11 @@ export default function Conversation({next}) {
     // We store these statuses in an array, so we need to get which array index is the player and which is the partner
     const participantIdx = typingChannel.split('-').indexOf(player.id)-1;
     const partnerIdx = 1 - participantIdx;
-
+    const partnerId = player.get('partnerId');
 
     const [msgsUI, setMsgsUI] = useState([]);
     let msgKey = 'm';
     let msgIdx = 0;
-    const [msgCount, setMsgCount] = useState(0);
 
     const valueRef = useRef(text);
     valueRef.current = text;
@@ -189,7 +197,6 @@ export default function Conversation({next}) {
         //     history: histMsgs
         // }), true);
 
-
         // This function is run to cleanup (remove) the infinite loop of generating autocompletions when this component is unmounted
         return () => clearInterval(interval); 
     }, []);
@@ -216,6 +223,8 @@ export default function Conversation({next}) {
             //     }), true);
             // }
 
+            let numMyMsgs = 0;
+            let numPlayerMsgs = 0;
             for (const msg of messages) {
                 
                 firstFromSender = lastSender != msg.sender;
@@ -223,9 +232,12 @@ export default function Conversation({next}) {
 
                 let senderTxt = '';
                 if (msg.sender == playerId) {
+                    numMyMsgs += 1;
+                    numPlayerMsgs += 1;
                     senderTxt = 'You';
-                } else if (msg.sender != playerId && msg.sender != -1) {
+                } else if (msg.sender == partnerId) {
                     senderTxt = 'Partner';
+                    numPlayerMsgs += 1;
                 }
 
                 let avatar = '';
@@ -234,7 +246,13 @@ export default function Conversation({next}) {
                     avatar = <Avatar src='images/smart_toy.svg' size='sm' />;
                     msgClass = 'botMsg';
                 }
-                if (msg.sender == -999) {
+                else if (msg.sender == '-'+playerId) {
+                    msgClass = 'youLeftMsg';
+                }
+                else if (msg.sender == '-'+partnerId) {
+                    msgClass = 'partnerLeftMsg';
+                }
+                else if (msg.sender == -999) {
                     senderTxt = "🤖";
                     msgClass = 'treatmentMsg';
                 }
@@ -243,43 +261,52 @@ export default function Conversation({next}) {
                     message: msg.txt,
                     sentTime: "just now",
                     sender: 'p'+msg.sender,
-                    direction: msg.sender == playerId ? 'outgoing' : 'incoming',
+                    direction: (msg.sender == playerId || msg.sender == '-'+playerId) ? 'outgoing' : 'incoming',
                     position: 'single',
                     }} key={msgKey + msgIdx} avatarPosition="tl"><Message.Header sender={senderTxt} />{avatar}</Message>);
                 msgIdx++;
             }
+            setPlayerMsgCount(numPlayerMsgs);
+            setNumMsgsSent(numMyMsgs);
             let newMsgCount = msgIdx;
             if (newMsgCount > msgCount) {
                 const newMsgs = messages.slice(msgCount - newMsgCount);
-                
-                setMsgCount(newMsgCount);
-                if (newMsgCount > playerMsgCount) {
-                    player.set('msgCount', newMsgCount);
-                    for (const msg of newMsgs) {
-                        let personId = 1;
-                        if (msg.sender == playerId) personId = 0;
-                        else if (msg.sender == -1) personId = -1;
-                        msg.personId = personId;
-    
-                        wsSend(JSON.stringify({
-                            command: 'update_history',
-                            pairId: player.id,
-                            pairType: pairType,
-                            personId: personId,
-                            msg: msg,
-                            topic: parseInt(topic.substring(1))-1,
-                            topicAgree: opinionStrength
-                        }), true);
-                    }
+                player.set('msgCount', newMsgCount);
+                for (const msg of newMsgs) {
+                    let personId = 1;
+                    if (msg.sender == playerId) personId = 0;
+                    else if (msg.sender == -1) personId = -1;
+                    msg.personId = personId;
+
+                    wsSend(JSON.stringify({
+                        command: 'update_history',
+                        pairId: player.id,
+                        pairType: pairType,
+                        personId: personId,
+                        msg: msg,
+                        topic: parseInt(topic.substring(1))-1,
+                        topicAgree: opinionStrength
+                    }), true);
                 }
-                setMsgsUI(uiElems);
+                
+            }
+            setMsgsUI(uiElems);
+
+            if (numPlayerMsgs >= gameParams.numMsgsFinishEarly && !player.get('requestEarlyFinish') && !player.get('forceEarlyFinish')) {
+                setSkipDisplay('flex');
             }
         }
     }, [messages]);
 
     useEffect(() => {
+        if (forceEarlyFinish) {
+            setSkipDisplay('none');
+        }
+    }, [forceEarlyFinish]);
+
+    useEffect(() => {
         if (
-            playerMsgCount > 0
+            msgCount > 0
             && messages.length > 0
             && messages[messages.length - 1].sender != playerId
             && messages[messages.length - 1].sender != -1
@@ -306,7 +333,7 @@ export default function Conversation({next}) {
             setAutocompleteOptions(['']);
         }
         setRngPerMessage(Math.random());
-    }, [playerMsgCount]);
+    }, [msgCount]);
 
     useEffect(() => {
         if (pairTypingStatus[partnerIdx] == true) {
@@ -322,7 +349,7 @@ export default function Conversation({next}) {
             el.style.height = "";el.style.height = el.scrollHeight + "px"   
         }
     }, [text]);
-    
+
     // Process sending a message to the partner
     function handleSend() {
         game.set(chatChannel, [...messages, {
@@ -439,7 +466,6 @@ export default function Conversation({next}) {
     }
     function goToChat() {
         player.set('acknowledgeGroup', true);
-
     }
 
     const handleAutocompleteFill = (val) => {
@@ -449,7 +475,7 @@ export default function Conversation({next}) {
     let reportPartnerInterval = null;
     const handleReportPartner = () => {
         if (reportPartnerStatus) {
-            setReportPartnerText('Report Language');
+            setReportPartnerText('Report Partner');
             setReportPartnerStatus(false);
             window.reportPartnerTimer = 0;
             TimerMixin.clearInterval(reportPartnerInterval);
@@ -461,7 +487,7 @@ export default function Conversation({next}) {
             window.reportPartnerTimer = 4;
             reportPartnerInterval = TimerMixin.setInterval(() => {
                 if (window.reportPartnerTimer <= 0) {
-                    setReportPartnerText('Report Language');
+                    setReportPartnerText('Report Partner');
                     setReportPartnerStatus(false);
                     TimerMixin.clearInterval(reportPartnerInterval);
                 } else {
@@ -522,6 +548,8 @@ export default function Conversation({next}) {
         </Typography>
         <Button onClick={goToChat} sx={{mb: 4}}>Continue to Chat</Button>
     </Stack>;
+
+    const readInstructionsUI = <div style={{marginTop: '10rem'}}><TaskInstructions /></div>;
 
     const skipButtonUI = window.location.hostname == 'localhost'
         ? <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}><Button sx={{ my: 2 }} onClick={handleButtonClick}>(Development Only) Skip</Button></Box>
@@ -599,6 +627,44 @@ export default function Conversation({next}) {
         rewriteUI = '';
     }
 
+    let warningDisplay = 'none';
+    if (stageTimer && stageTimer.elapsed / 1000 / 60 > 3 && numMsgsSent < 2) {
+        warningDisplay = 'flex';
+    }
+
+    function handleEarlyFinish() {
+        // TODO: Implement early finish
+        // game.set(chatChannel, [...messages, {
+        //     sender: '-'+playerId,
+        //     sentTime: 'just now',
+        //     txt: ''
+        // }]);
+        player.set('requestEarlyFinish', true);
+        game.set('earlyFinishTime', {
+            playerId: player.id,
+            finishTime: stageTimer?.remaining ? stageTimer.remaining : 0}
+        );
+        setSkipDisplay('none');
+    }
+
+    let timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
+    const elapsed = stageTimer?.elapsed ? stageTimer.elapsed : 0;
+
+    if ((forceEarlyFinish || player.get('requestEarlyFinish')) && stageTimer) {
+        timeLeft = gameParams.cooperationDiscussionTime * 1000 * 60 - (earlyFinishTimeLeft - timeLeft);
+        if (timeLeft <= 0) {
+            next();
+        }
+    } else if (currentStage == 'cooperationDiscussion') {
+        timeLeft = (gameParams.chatTime + gameParams.cooperationDiscussionTime) * 1000 * 60 - elapsed;
+        if (timeLeft <= 0) {
+            next();
+        }
+    } else {
+        // conversation discussion
+        timeLeft = gameParams.chatTime * 1000 * 60 - elapsed;
+    }
+
     const chatUI = <Stack sx={{
         maxWidth: {
             sm: '30rem',
@@ -610,7 +676,23 @@ export default function Conversation({next}) {
         <Typography level="h2" textAlign="center">
        Chat
         </Typography>
-        <Typography level="body-md" textAlign="center">{msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)} remaining</Typography>
+        <Typography level="body-md" textAlign="center">{msToTime(timeLeft)} remaining</Typography>
+        <Alert
+            variant="soft"
+            color="danger"
+            invertedColors
+            startDecorator={
+                <Warning />
+            }
+            sx={{ alignItems: 'flex-start', gap: '1rem', display: warningDisplay }}
+        >
+            <Box sx={{ flex: 1 }}>
+            <Typography level="h3">Inactivity warning!</Typography>
+            <Typography level="body-md">
+                If you do not actively participate in this chat, you will be removed from this study.
+            </Typography>
+            </Box>
+        </Alert>
         <MainContainer style={{overflow: 'visible'}}>
             <ChatContainer style={{height: '25rem'}}>       
                 <MessageList typingIndicator={typingIndicator}>
@@ -625,6 +707,28 @@ export default function Conversation({next}) {
             {msgSendUI}
             {rewriteUI}
             {autocompleteUI}
+            <div className='msgSend'>
+                <Alert
+                    variant="soft"
+                    color="neutral"
+                    invertedColors
+                    startDecorator={
+                        <FastForwardRounded />
+                    }
+                    style={{alignItems: 'flex-start', display: currentStage != 'cooperationDiscussion' ? skipDisplay : 'none'}}
+                >
+                    <Box sx={{ flex: 1, mt: -0.25 }}>
+                        <Typography level="body-md">
+                            Thanks for your active participation! You may end the chat early if you'd like.
+                        </Typography>
+                        <Box sx={{ mt: -0, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            <Button variant="outlined" size="sm" onClick={handleEarlyFinish}>
+                                Go to next step
+                            </Button>
+                        </Box>
+                    </Box>
+                </Alert>
+            </div>
         </MainContainer>
         {skipButtonUI}
         <Button variant='outlined' color="danger" onClick={handleReportPartner} sx={{
@@ -635,7 +739,16 @@ export default function Conversation({next}) {
         >{reportPartnerText}</Button>
     </Stack>;
 
-    const ui = acknowledgedGroup ? chatUI : acknowledgeGroupUI;
+    let ui = '';
+    if (acknowledgedGroup) {
+        if (readInstructions) {
+            ui = chatUI;
+        } else {
+            ui = readInstructionsUI;
+        }
+    } else {
+        ui = acknowledgeGroupUI;
+    }
 
     return (
         <Container maxWidth="100vw">

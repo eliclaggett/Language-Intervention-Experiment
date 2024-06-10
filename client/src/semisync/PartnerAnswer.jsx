@@ -9,23 +9,25 @@ import * as React from 'react';
 import { Button, Box, Card, Container, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup } from '@mui/joy';
 import LikertQuestion from '../components/LikertQuestion.jsx';
 import { useState, useEffect } from 'react';
-import { usePlayer, useGame, usePlayers, useStageTimer } from "@empirica/core/player/classic/react";
+import { usePlayer, useGame, useStage, usePlayers, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 
 // TODO: Remove next?
 export default function PartnerAnswer({next, back}) {
 
     const player = usePlayer();
+    const stage = useStage();
     const partnerId = player.get('partnerId') || -1;
     const players = usePlayers();
-    const partnerAnswer = player.get('partnerAnswer');
+    const partnerAnswer = player.get('partnerAnswer') || 'No answer submitted, please click "Neutral" to continue.';
 
     let partner = null;
     let partnerFinished = false;
     if (players) {
         partner = players.filter((p) => p.id == partnerId)[0];
         partnerFinished = partner.get('submitReflectionSurvey') || false;
-        console.log(partnerFinished);
+        // partnerFinished = partner.get('submitReflectionSurvey') || false;
+        // console.log(partnerFinished);
     } else {
         partner = null;
         partnerFinished = true;
@@ -39,6 +41,12 @@ export default function PartnerAnswer({next, back}) {
     
     const [currentValue, setCurrentValue] = useState('');
     
+    let timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
+    if (stage.get('name') != 'semi_asynchronous_steps') {
+        timeLeft += (gameParams.cooperationTime + gameParams.reflectionSurveyTime + gameParams.partnerAnswerTime) * 1000 * 60;
+    } else {
+        timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
+    }
 
     function handleRadioButtonChange(evt) {
         setCurrentValue(evt.target.value);
@@ -66,7 +74,8 @@ export default function PartnerAnswer({next, back}) {
         Waiting for your partner to finish...
         </Typography>
         <Typography level="body-md" textAlign="center">
-        We will ask you to review your partner's answers after they finish writing their report. You will wait a maximum of {msToTime(stageTimer?.remaining ? stageTimer.remaining : 0)}.
+        We will ask you to review your partner's answers after they finish writing their report.<br/><br/>
+        <span style={{color:'rgb(102, 93, 245)'}}>You will wait a maximum of {msToTime(timeLeft)}.</span>
         </Typography>
         
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row'}}>

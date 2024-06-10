@@ -115,27 +115,6 @@ export default function Tutorial({ next }) {
 
 
     }
-    function handleNext() {
-        if (radioButtonVals && radioButtonVals['q'+(step+1)] == correctAnswers[step]) {
-            setNextButtonDisabled(false);
-        } else {
-            setNextButtonDisabled(true);
-        }
-
-        if (step == 5) {
-            // Mark that the tutorial was finished
-            player.set('submitTutorial', true);
-            next();
-        } else {
-            if (step == 4) {
-                setBackNextDisplay('none');
-            }
-            setStep(step+1);
-            setQ4SuccessDisplay('none');
-            setBackButtonDisabled(false);
-        }
-    }
-
     function handleWhy() {
         setLowBonusExplanation(<div>
             <br/>
@@ -146,18 +125,43 @@ export default function Tutorial({ next }) {
         </div>);
     }
 
+    function handleNext() {
+        if (radioButtonVals && radioButtonVals['q'+(step+1)] == correctAnswers[step]) {
+            setNextButtonDisabled(false);
+        } else {
+            setNextButtonDisabled(true);
+        }
+
+        if (step == 5) {
+            // Mark that the tutorial was finished
+            player.set('passedTutorial', true);
+            next();
+        } else if (step == 4) {
+                setBackNextDisplay('none');
+                setWarningDisplay('flex');
+                setQ4SuccessDisplay('none');
+        } else {
+            setStep(step+1);
+            setBackButtonDisabled(false);
+        }
+    }
+
+    
+
     function handleFinishTutorial() {
-        player.set('submitTutorial', true);
+        player.set('passedTutorial', true);
         next();
     }
 
     // Logic to move to next step or stop the experiment
-    const passedTutorial = player.get('submitTutorial');
+    const passedTutorial = player.get('passedTutorial');
     if (passedTutorial === true) {
         next();
     }
 
     // Custom UI Elements
+    const[warningDisplay, setWarningDisplay] = useState('none');
+
     // Step 1
     let tutorialStepUI = <Stack gap={1}>
                         <Typography level="h2" textAlign="center">
@@ -308,42 +312,38 @@ export default function Tutorial({ next }) {
                             <br/>
                             For example, if you share {formatMoney(exampleShareAmt)} with your partner, your bonus will decrease by {formatMoney(exampleShareAmt)} and their bonus will increase by {formatMoney(exampleShareAmt*gameParams.shareMultiplier)}.
                             </Typography>
-                            
                             <FormControl sx={{pt: 2}}>
                                 <FormLabel>What is your final bonus if both you and your partner share $1.00 with each other?</FormLabel>
                                 <RadioGroup name="q4" onChange={handleRadioButtonChange} defaultValue=''>
                                     {q4RadioButtons}
                                 </RadioGroup>
                             </FormControl>
+                            <Alert
+                    variant="soft"
+                    color="danger"
+                    invertedColors
+                    startDecorator={
+                        <Warning />
+                    }
+                    sx={{ alignItems: 'flex-start', gap: '1rem', display: warningDisplay }}
+                >
+                    <Box sx={{ flex: 1 }}>
+                    <Typography level="h3">Be warned!</Typography>
+                    <Typography level="body-md">
+                        If you choose to share your bonus but your partner does not, your final bonus payment will decrease.
+                        {lowBonusExplanation}
+                    </Typography>
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                        <Button variant="outlined" size="sm" onClick={handleWhy}>
+                        Why?
+                        </Button>
+                        <Button variant="solid" size="sm" onClick={handleFinishTutorial}>
+                        I understand
+                        </Button>
+                    </Box>
+                    </Box>
+                </Alert>
                         </Stack>;
-    } else if (step == 5) {
-        tutorialStepUI = <Stack gap={1}>
-            <Alert
-                variant="soft"
-                color="danger"
-                invertedColors
-                startDecorator={
-                    <Warning />
-                }
-                sx={{ alignItems: 'flex-start', gap: '1rem' }}
-            >
-                <Box sx={{ flex: 1 }}>
-                <Typography level="h3">Be warned!</Typography>
-                <Typography level="body-md">
-                    If you choose to share your bonus but your partner does not, your final bonus payment will decrease.
-                    {lowBonusExplanation}
-                </Typography>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                    <Button variant="outlined" size="sm" onClick={handleWhy}>
-                    Why?
-                    </Button>
-                    <Button variant="solid" size="sm" onClick={handleFinishTutorial}>
-                    I understand
-                    </Button>
-                </Box>
-                </Box>
-            </Alert>
-        </Stack>; 
     }
 
     // UI

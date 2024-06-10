@@ -42,8 +42,7 @@ export default function Game() {
   }
 
   switch (stage.get("name")) {
-    case "conversation":
-      return <Conversation />;
+    // case "conversation":
     case 'semi_asynchronous_steps':
       return <SemiSynchronousSteps />;
     default:

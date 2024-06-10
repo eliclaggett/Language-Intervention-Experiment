@@ -46,12 +46,15 @@ const gameParams = {
   treatmentType: 'suggestion', // completion, suggestion, rewrite, none
   suggestionProbability: 0.75,
 
+  // Configuration
+  numMsgsFinishEarly: 25,
+
   // Timing
   chatTime: 10,
   // chatTime: 99, // TEST ONLY
   followupDelay1: 3,
   followupDelay2: 3,
-
+  
   cooperationDiscussionTime: 3,
   cooperationTime: 3,
   reflectionSurveyTime: 7,
@@ -68,6 +71,7 @@ const preEvalTimers = {};
 const playerStatus = {};
 const chatChannelTopics = {};
 let gamePairs = {};
+let currentGame = null;
 
 Empirica.on("game", (ctx, { game }) => {
   // game init after at least one player joins the lobby
@@ -76,6 +80,7 @@ Empirica.on("game", (ctx, { game }) => {
   game.set('lobbyDuration', game.lobbyConfig.duration);
   game.set('submitCooperationDecision', false);
   game.set('currentStage', 'onboarding');
+  currentGame = game;
 });
 
 function startChatbotPrompting(game) {
@@ -105,16 +110,21 @@ function startChatbotPrompting(game) {
 
     for (const k of Object.keys(chatChannelTopics)) {
       const topic = parseInt(chatChannelTopics[k].substring(1)) - 1;
+      const p1Id = k.split('-')[1];
+      const p2Id = k.split('-')[2];
+
+      const p1 = game.players.filter((p) => p.id == p1Id)[0];
+      const p2 = game.players.filter((p) => p.id == p2Id)[0];
 
       if (currentMinute == gameParams['followupDelay1']) {
         nextPrompt = botTexts['customPrompts'][topic];
       } else if (currentMinute == gameParams['followupDelay1']+gameParams['followupDelay2']) {
         nextPrompt = botTexts['customFollowups'][topic];
       }
-      else if (currentMinute == gameParams.chatTime-1 && gameParams.cooperationDiscussionTime > 0) {
+      else if (currentMinute == gameParams.chatTime-1 && gameParams.cooperationDiscussionTime > 0 && !(p1.get('requestEarlyFinish') || p2.get('requestEarlyFinish')) ) {
       
-        const cooperationDiscussionPrompts = ['Times up! Thank you for discussing your opinions.',
-        'Now, you have a few minutes to discuss how to allocate your bonus.',
+        const cooperationDiscussionPrompts = ['Time\'s up! Thank you for discussing your opinions.',
+        'Finally, you have a few minutes to discuss how to allocate your bonus.',
         'If you share your bonus with each other, you will both receive 2x the amount you share.',
         "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus."];
         const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map((el) => { return {
@@ -124,7 +134,7 @@ function startChatbotPrompting(game) {
         }});
         const msgs = game.get(k) || [];
         game.set(k, [...msgs, ...cooperationDiscussionMsgs]);
-        game.set('currentStage', 'cooperationDiscussion')
+        game.set('currentStage', 'cooperationDiscussion');
       }
 
       if (nextPrompt.length > 0) {
@@ -148,6 +158,9 @@ function startChatbotPrompting(game) {
 }
 
 let ps = {};
+const playerChatChannels = {};
+const playerTypingChannels = {};
+
 Empirica.onGameStart(({ game }) => {
   console.log('making pairs');
   // Setup the main task
@@ -156,13 +169,15 @@ Empirica.onGameStart(({ game }) => {
     name: "Round",
   });
 
-  round.addStage({ name: "conversation", duration:
-    (gameParams.chatTime + gameParams.cooperationDiscussionTime) * 60 
-  });
+  // round.addStage({ name: "conversation", duration:
+  //   (gameParams.chatTime + gameParams.cooperationDiscussionTime) * 60 
+  // });
   // round.addStage({ name: "cooperation", duration: gameParams.cooperationTime * 60 });
   round.addStage({
     name: "semi_asynchronous_steps", duration:
       (
+      gameParams.chatTime +
+      gameParams.cooperationDiscussionTime +
       gameParams.cooperationTime +
       gameParams.reflectionSurveyTime +
       gameParams.partnerAnswerTime
@@ -184,7 +199,7 @@ Empirica.onGameStart(({ game }) => {
 
   for (const player of game.players) {
 
-    if (typeof (pairs[player.id]) == 'undefined' || pairs[player.id] == -1) {
+    if (typeof(pairs[player.id]) == 'undefined' || pairs[player.id] == -1) {
       // Could not pair player
       console.log('could not pair player',player.id);
       player.set('end', true);
@@ -195,8 +210,15 @@ Empirica.onGameStart(({ game }) => {
 
     const partner = players.filter((p) => p.id == pairs[player.id])[0];
 
-    chatChannel = 'c-' + player.id + '-' + partner.id;
-    typingChannel = 't-' + player.id + '-' + partner.id;
+    let chatChannel = 'c-' + player.id + '-' + partner.id;
+    let typingChannel = 't-' + player.id + '-' + partner.id;
+    if (Object.keys(playerChatChannels).includes(partner.id)) {
+      chatChannel =  playerChatChannels[partner.id];
+      typingChannel =  playerTypingChannels[partner.id];
+    }
+    
+    playerChatChannels[player.id] = chatChannel;
+    playerTypingChannels[player.id] = typingChannel;
 
     player.set('chatChannel', chatChannel);
     player.set('typingChannel', typingChannel);
@@ -213,7 +235,7 @@ Empirica.onGameStart(({ game }) => {
     partner.set('partnerId', player.id);
     partner.set('topic', topics[partner.id]);
     partner.set('completionCode', completionCodes['task2']);
-    partner.set('partnerAnswer', 'N/A');
+    // partner.set('partnerAnswer', '');
     partner.set('group', groups[partner.id]);
     partner.set('partnerGroup', groups[player.id]);
 
@@ -233,7 +255,12 @@ Empirica.onStageStart(({ stage }) => {
 });
 
 Empirica.onStageEnded(({ stage }) => {
-
+  // console.log(stage);
+  // for (const player of stage.currentGame.players) {
+    // player.set('serverChatEnded', true);
+    // console.log('Player:');
+    // console.log(player.id);
+  // }
 });
 
 Empirica.onRoundEnded(({ round }) => { });
@@ -251,20 +278,20 @@ Empirica.on("player", (ctx, { player, _ }) => {
   if (player.get('gameParams')) return;
 
   player.set('gameParams', gameParams);
-  player.set('isTyping', false);
-  player.set('partner', -1);
-  player.set('partnerFinished', false);
-  player.set('passEval', true);
-  player.set('preEvalStep', 0);
-  player.set('finishPreEval', false);
-  player.set('startTask2', false);
-  player.set('submitCooperationDecision', false);
-  player.set('cooperationDecision', false);
-  player.set('completionCode', completionCodes['task1']);
-  player.set('partnerCooperationDecision', -1);
-  player.set('partnerCooperationType', 'Share');
-  player.set('processGameEnd', false);
-  player.set('acceptSuggestion', []);
+  // player.set('isTyping', false);
+  // player.set('partner', -1);
+  // player.set('partnerFinished', false);
+  // player.set('passEval', true);
+  // player.set('preEvalStep', 0);
+  // player.set('finishPreEval', false);
+  // player.set('startTask2', false);
+  // player.set('submitCooperationDecision', false);
+  // player.set('cooperationDecision', false);
+  // player.set('completionCode', completionCodes['task1']);
+  // player.set('partnerCooperationDecision', -1);
+  // player.set('partnerCooperationType', 'Share');
+  // player.set('processGameEnd', false);
+  // player.set('acceptSuggestion', []);
   // player.set('submittedSurvey' ,false);
 
   playerStatus[player.id] = {
@@ -369,16 +396,65 @@ Empirica.on("player", "sendPreEvalMsg", (ctx, { player, sendPreEvalMsg }) => {
   updatePreEvalMessageSchedule(player);
 });
 
-Empirica.on("player", "submitOpinionSurvey", (ctx, { player, sendPreEvalMsg }) => {
+Empirica.on("player", "submitOpinionSurvey", (ctx, { player, submitOpinionSurvey }) => {
   submittedOpinionSurvey.add(player.id);
-});
 
+  // console.log(submitOpinionSurvey);
+  let hasSomeOpinion = false;
+  for (const q in submitOpinionSurvey) {
+    if (submitOpinionSurvey[q] != '3') {
+      hasSomeOpinion = true; break;
+    }
+  }
+  if (!hasSomeOpinion) {
+    player.set('end', true);
+    player.set('endReason', 'noOpinion');
+    player.exit('noOpinion');
+  }
+  
+});
 
 Empirica.on("player", "submitReflectionSurvey", (ctx, { player, submitReflectionSurvey }) => {
   const reflectionSurveyResponse = submitReflectionSurvey;
   if (playerStatus[player.id]) playerStatus[player.id].submitReflectionSurvey = true;
   // player.set('submittedSurvey', true);
   const partner = null;
+});
+
+Empirica.on("player", "requestEarlyFinish", (ctx, { player, requestEarlyFinish }) => {
+  
+  const chatChannel = player.get('chatChannel');
+  const partnerId = gamePairs[player.id];
+  const partner = player.currentGame.players.filter((p) => p.id == partnerId)[0];
+  partner.set('forceEarlyFinish', true);
+  
+  const cooperationDiscussionPrompts = ['Time\'s up! Thank you for discussing your opinions.',
+    'Finally, you have a few minutes to discuss how to allocate your bonus.',
+    'If you share your bonus with each other, you will both receive 2x the amount you share.',
+    "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus."];
+  const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map((el) => { return {
+    sender: -1,
+    sentTime: 'just now',
+    txt: el
+  }});
+
+  const msgs = player.currentGame.get(chatChannel) || [];
+  
+  player.currentGame.set(chatChannel, [...msgs, ...cooperationDiscussionMsgs]);
+  player.currentGame.set('currentStage', 'cooperationDiscussion')
+});
+
+Empirica.on("game", "earlyFinishTime", (ctx, { game, earlyFinishTime }) => {
+  
+  const playerId = earlyFinishTime['playerId'];
+  const finishTime = earlyFinishTime['finishTime'];
+
+  const player = game.players.filter((p) => p.id == playerId)[0];
+  const partnerId = gamePairs[player.id];
+  const partner = game.players.filter((p) => p.id == partnerId)[0];
+  
+  player.set('earlyFinishTime', finishTime);
+  partner.set('earlyFinishTime', finishTime);
 });
 
 Empirica.on("game", "partnerAnswer", (ctx, { game, partnerAnswer }) => {

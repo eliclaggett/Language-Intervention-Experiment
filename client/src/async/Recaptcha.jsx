@@ -5,12 +5,17 @@
  * Description:
  * This ReactJS file is reCAPTCHA step of the experiment's onboarding process.
  */
-import * as React from 'react';
+import React, { useEffect } from 'react';
 import { Container, Typography, Stack } from '@mui/joy';
 import ReCAPTCHA from "react-google-recaptcha";
 import { usePlayer } from "@empirica/core/player/classic/react";
 
 export default function Recaptcha({ next }) {
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const sessionIdFromURL = urlParams.get('SESSION_ID');
+    const studyIdFromURL = urlParams.get('STUDY_ID');
 
     const player = usePlayer();
     const gameParams = player.get('gameParams');
@@ -27,6 +32,15 @@ export default function Recaptcha({ next }) {
     if (player.get('passedRecaptcha') === true) {
         next();
     }
+
+    useEffect(() => {
+        if (sessionIdFromURL) {
+            player.set('sessionID', sessionIdFromURL);
+        }
+        if (sessionIdFromURL) {
+            player.set('studyID', studyIdFromURL);
+        }
+    }, []);
     
     // UI
     return (

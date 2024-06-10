@@ -22,6 +22,9 @@ import CssBaseline from '@mui/joy/CssBaseline';
 import { PlayerCreate } from "./PlayerCreate.jsx";
 import { wsSend } from "./utils/utils.js";
 import TimerMixin from 'react-timer-mixin';
+import ChatEndAcknowledgement from "./semisync/ChatEndAcknowledgement.jsx";
+import TaskInstructions from "./components/TaskInstructions.jsx";
+import ReflectionSurvey from "./semisync/ReflectionSurvey.jsx";
 
 // Custom theme
 const theme = extendTheme({
@@ -120,15 +123,15 @@ export default function App() {
   function onboardingSteps({ game, player }) {
     return [
       // [Warning] Test only
-      Tutorial,
-      OpinionSurvey,
+      // Tutorial,
+      // OpinionSurvey,
 
       // Real onboarding steps
-      // Recaptcha,
-      // ConsentForm,
-      // Tutorial,
-      // // PreEvaluation, // No pre-evaluation
-      // OpinionSurvey,
+      Recaptcha,
+      ConsentForm,
+      Tutorial,
+      // PreEvaluation, // No pre-evaluation
+      OpinionSurvey,
     ];
   }
   
