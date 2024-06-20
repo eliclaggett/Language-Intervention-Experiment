@@ -10,8 +10,6 @@ ssh -i deployment/server.pem $SERVER_SSH bash << HERE
  if test -f RUNNING_PID
  then
  kill -2 \`cat ./RUNNING_PID\`
- rm RUNNING_PID
- rm log_*
  rm nohup.out
  echo "Successfully stopped the experiment!";
  else

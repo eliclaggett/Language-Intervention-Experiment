@@ -16,6 +16,12 @@ EOF
 
 # Run ML server
 ssh -i ~/.ssh/eli-xps eli@eli-xps.lan.local.cmu.edu bash << EOF
+ if test -f ~/RUNNING_PID
+ then
+ kill \`cat ~/RUNNING_PID\`
+ rm ~/RUNNING_PID
+ echo "Killed previously running NLP"
+ fi
  . ~/.profile
  cd ~/Code/experiment/chat-cooperation/nlp
  python3 nlp.py &

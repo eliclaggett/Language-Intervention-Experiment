@@ -42,8 +42,14 @@ eval "$(pyenv init -)"
 if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -)"; fi
 
 # Finished loading, start running
-echo "Running Empirica and Python in '${DEPLOYMENT}' mode"
 
+if test -f "${EXPERIMENT_DIR}/${EXPERIMENT_NAME}/.empirica/local/tajriba.json"
+then
+echo "Removing extraneous tajriba.json file..."
+rm "${EXPERIMENT_DIR}/${EXPERIMENT_NAME}/.empirica/local/tajriba.json"
+fi
+
+echo "Running Empirica and Python in '${DEPLOYMENT}' mode"
 # Run Empirica
 if [ "$DEPLOYMENT" == "dev" ]
 then
@@ -54,6 +60,7 @@ else
     { emp serve "${EXPERIMENT_NAME}.tar.zst" -s ":${PORT_EMPIRICA}"  --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" --tajriba.store.file "${STORE_PATH}/tajriba-${dt}.json" > "$current_dir/log_empirica.log" 2>&1 & }
     pid1=$!
     echo "Empirica running with PID $pid1";
+    echo "${STORE_PATH}/tajriba-${dt}.json";
 fi
 
 # Run Python
@@ -65,7 +72,7 @@ fi
 # Stop all child processes when we stop this script
 function cleanup()
 {
-    kill -9 $pid1;
+    kill -2 $pid1;
     echo "$pid1 stopped";
     rm log_*
     rm RUNNING_PID
