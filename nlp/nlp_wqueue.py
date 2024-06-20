@@ -38,6 +38,7 @@ topics = [
     "the idea that COVID-19 restrictions went too far",
     "having stricter immigration requirements into the U.S."
 ]
+agreement_type = ['disagree', 'agree']
 
 # ChatGPT
 client = OpenAI(
@@ -61,10 +62,13 @@ dialogue_acts = ['acknowledging my partner\'s opinions', 'asking a follow-up que
 prompt_next_da = 'You are an expert conversation analyzer. Here are the last few messages of a text chat between two users:\n\n"{{last_msgs}}"\n\nWhich of the following responses is the most appropriate for the next message? PICK ONE. These are your answer choices:\n{{response_str}}\nIf multiple of these strategies would be good, say "ANY".'
 
 # Yay, we know the next dialogue act
-prompt_generate_msg = 'Continue the discussion as the person labeled "YOU" in a text message chat about {{convo_topic}}{{belief_str}}. If your partner says something interesting or unclear, consider asking them to elaborate. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nReply to the last message sent by PARTNER{{dialogue_act}}. Do not respond to the person labeled MODERATOR.{{linguistic_techniques}}{{no_repeat}}'
+prompt_generate_msg_relational  = 'Continue the discussion as the person labeled "YOU" in a text message chat about {{convo_topic}}. If your partner says something interesting or unclear, consider asking them to elaborate. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nReply to the last message sent by PARTNER. Do not respond to the person labeled MODERATOR.{{linguistic_techniques}}{{no_repeat}}'
+prompt_generate_msg_personal    = 'Continue the discussion as the person labeled "YOU" in a text message chat about {{convo_topic}}. If your partner says something interesting or unclear, consider asking them to elaborate. ALWAYS exactly match the language style of the person labeled "YOU", copying their words, punctuation, and grammar. Here are the last few messages of the discussion:\n\n"{{last_msgs}}"\n\nReply to the last message sent by PARTNER. Do not respond to the person labeled MODERATOR.{{linguistic_techniques}}{{no_repeat}}'
+# Share your opinions and ask about your partner\'s when appropriate to do so. 
+
 
 # Experiments to improve naturalness
-prompt_generate_msg += """ Always speak in a natural tone. Respond in a maximum of one sentence (less than 12 words)!
+prompt_natural = """ Always speak in a natural tone. Respond in a maximum of one sentence (less than 12 words)!
 For example:
 - Instead of: "I understand that must be difficult."
 - Try: "Oh man, that sounds tough."
@@ -72,8 +76,11 @@ For example:
 - Instead of saying "I am able to assist with that."
 - Try: "Sure, I can help out!"
 """
+prompt_generate_msg_relational += prompt_natural
+prompt_generate_msg_personal += prompt_natural
 
-prompt_generate_completion = prompt_generate_msg + ' Start the reply with this unfinished sentence: "{{unfinished_sentence}}" and complete it.'
+prompt_generate_completion_relational = prompt_generate_msg_relational + ' Start the reply with this unfinished sentence: "{{unfinished_sentence}}" and complete it.'
+prompt_generate_completion_personal = prompt_generate_msg_personal + ' Start the reply with this unfinished sentence: "{{unfinished_sentence}}" and complete it.'
 
 prompt_rewrite_msg = 'Here are the last few messages of a discussion between two people and a moderator about {{convo_topic}}{{belief_str}}:\n\n"{{last_msgs}}"\n\nRephrase the last message: "{{final_msg}}". {{linguistic_techniques}} Make sure that the rephrasing is consistent with the intent of the original message and doesn\'t add extra information. Change as few words as possible.'
 # Yay, we have generated a message
@@ -123,44 +130,6 @@ def generateNoRepeat(pairId):
         
         prompt_addition += '\nDO NOT repeat the same wording as these messages! Think of something different.'
     return prompt_addition
-
-def run_ai_analysis(msg_history):
-    # Run everything but generate autocomplete when we send a msg
-    # Run everything including autocomplete when partner sends a message
-
-    # Chat log string
-    chat_log = ''
-
-    for msg in msg_history:
-        if msg['personId'] == 0:
-            chat_log += 'YOU: ' + msg['txt'] + '\n\n'
-        elif msg['personId'] == 1:
-            chat_log += 'PARTNER: ' + msg['txt'] + '\n\n'
-        else:
-            chat_log += 'MODERATOR: ' + msg['txt'] + '\n\n'
-    
-    chat_log = chat_log[0:-2]
-
-    # Check if the last msg stated a belief. If so, add it to the knowledgebase
-    if (msg_history[-1]['personId'] != -1 and False):
-        did_state_belief = run_model(prompt_did_state_belief, {
-            'msg': msg_history[-1]['txt']
-        }, dict( max_new_tokens=3, streamer=None ))
-
-        if did_state_belief.strip().lower()[0:3] == 'yes':
-            extracted_belief = run_model(prompt_get_belief, {
-                'msg': msg_history[-1]['txt']
-            }, dict(max_new_tokens=64, streamer=None))
-            
-            extracted_belief = extracted_belief[0:extracted_belief.find('.')].strip()
-            if extracted_belief.find('disagrees') > -1:
-                extracted_belief = extracted_belief[extracted_belief.find('disagrees'):]
-            else:
-                extracted_belief = extracted_belief[extracted_belief.find('agrees'):]
-            extracted_belief = extracted_belief.replace('grees', 'gree')
-            
-            beliefs.append({'participantId': msg_history[-1]['sender'], 'belief': extracted_belief})
-    return ''
 
 def run_ai_rewrite(msg_history, topic, pairType, topicAgree, treatmentMode, pairId):
 
@@ -229,7 +198,7 @@ def run_ai_rewrite(msg_history, topic, pairType, topicAgree, treatmentMode, pair
 
     return next_msg
 
-def run_ai_autocomplete(msg_history, topic, pairType, topicAgree, treatmentMode, pairId):
+def run_ai_suggest(msg_history, topic, pairType, topicAgree, treatmentMode, pairId):
     # Check if message is from partner
     if msg_history[-1]['personId'] == 1:
 
@@ -254,77 +223,29 @@ def run_ai_autocomplete(msg_history, topic, pairType, topicAgree, treatmentMode,
                 chat_log_end += 'MODERATOR: ' + msg['txt'] + '\n\n'
         chat_log_end = chat_log_end[0:-2]
 
-        # Check what type of message should be sent next
-        # da_options = ''
-        # da_idx = 'A'
-        # for da in dialogue_acts:
-        #     da_options += f'{da_idx}: {da}\n'
-        #     da_idx = chr(ord(da_idx)+1)
-        # next_msg_type = run_model(prompt_next_da, {
-        #     'last_msgs': chat_log_end,
-        #     'response_str': da_options
-        # }, dict(max_new_tokens=24, streamer=None))
-        # if (len(da) >= 1):
-        #     da = re.search(r'([A-Z])\W', next_msg_type)
-        #     if da:
-        #         da = da.group(1)
-        #         da = ord(da) - ord('A')
-        #     else:
-        #         da = 1
-        # else:
-        #     da = 1
-
         # Generate a message consistent with the user's beliefs that fits appropriately in the conversation.
-        belief_str = ''
-        if len(beliefs) > 0:
-            for belief in beliefs:
-                if belief['participantId'] == pairId:
-                    if len(belief_str) > 10:
-                        belief_str += ' and '
-                    else:
-                        belief_str += ' and you '
-                    belief_str += belief['belief']
+        print(f'Generating suggestion for {pairId}...', flush=True)
 
-        print(f'Generating completion for {pairId}...', flush=True)
+        next_msg = ''
+        if (pair_metadata[pairId]['treatmentAlgorithm'] == 'personal'):
+            next_msg = run_model(prompt_generate_msg_personal, {
+                'convo_topic': topics[topic],
+                'last_msgs': chat_log,
+                'linguistic_techniques': getLinguisticTechniques(2, topicAgree, topic),
+                'no_repeat': generateNoRepeat(pairId)
+            }, dict(max_new_tokens=64, streamer=None))
+        else:
+            next_msg = run_model(prompt_generate_msg_relational, {
+                'convo_topic': topics[topic],
+                'last_msgs': chat_log,
+                'linguistic_techniques': getLinguisticTechniques(pairType, topicAgree, topic),
+                'no_repeat': generateNoRepeat(pairId)
+            }, dict(max_new_tokens=64, streamer=None))
 
-        next_msg = run_model(prompt_generate_msg, {
-            'convo_topic': topics[topic],
-            'last_msgs': chat_log,
-            'belief_str': '',
-            'dialogue_act': '',
-            # 'belief_str': belief_str,
-            # 'dialogue_act': ', ' + dialogue_acts[da],
-            'linguistic_techniques': getLinguisticTechniques(pairType, topicAgree, topic),
-            'no_repeat': generateNoRepeat(pairId)
-        }, dict(max_new_tokens=64, streamer=None))
-        
-        # next_msg = ''
-        # for new_token in streamer:
-        #     next_msg += new_token
-        #     yield new_token
-        #     if new_token == '</s>':
-        #         break
-        print(f'DONE Generating completion for {pairId}', flush=True)
+        print(f'Done generating suggestion for {pairId}:', flush=True)
         participant_suggestion_history[pairId].append(next_msg)
+        
         print(next_msg, flush=True)
-        next_msg = next_msg.strip()
-        if next_msg[0] == '"':
-            next_msg = next_msg[1:]
-            next_msg = next_msg[0:next_msg.find('"')]
-
-
-        if next_msg.find(':') > -1:
-            next_msg = next_msg[next_msg.lower().find('you:')+5:]
-        
-        sentences = re.findall(r'[^\.!\?]+[\.!\?]', next_msg)
-        if len(sentences) > 2:
-            next_msg = ''.join(sentences[0:2])
-        
-        end = 0
-        for match in re.finditer(r'[\.!\?]', next_msg):
-            end = match.end()
-        next_msg = next_msg[:end+1]
-
         return next_msg
 # END - FUNCTIONS  ----------------------------------------------------
 
@@ -341,41 +262,6 @@ def generate(params):
     return output
 
 
-# Function to generate model predictions.
-def predict(messages):
-
-    # model_inputs = tokenizer.apply_chat_template(messages, return_tensors='pt').to(device)
-    
-    
-    enc = tokenizer(messages, return_tensors='pt', add_special_tokens=False)
-    enc['input_ids'] = enc['input_ids'].to(device)
-    enc['attention_mask'] = enc['attention_mask'].to(device)
-    
-
-    # model.generate(model_inputs, **generate_kwargs)
-    t = Thread(target=generate, args=[{'args': enc, 'kwargs': generate_kwargs}])
-    t.start()
-
-    for new_token in streamer:
-        yield new_token
-        if new_token == '</s>':
-            break
-
-# Partial message generation prompts (autocompletion)
-# elif TREATMENT_MODE == 'partial':
-    # still need to implement autocomplete prompts
-    # if TREATMENT_TYPE == 'supportive':
-    #     system_msg = 'You are an intelligent assistant that suggests a way to complete a sentence and you respond empathetically and softly to all opposing viewpoints. You always use a friendly and casual tone. You also may suggest different perspectives, but do so in a gentle  You avoid assertions and arguments. Be supportive and nice! This is the assigned discussion topic:'
-    #     # example_reply = sampleMsgs[2]['content'][0:2] + ' and I\'d love to hear your opinion!'
-    # elif TREATMENT_TYPE == 'argumentative':
-    #     system_msg = 'You are an intelligent assistant that suggests a way to complete a sentence and you always argue with the opinions of others. You may disregard the tone of your speech. You should focus on winning the argument and convincing the other parties of your perspective. Do not apologize. This is the assigned discussion topic:'
-        # example_reply = sampleMsgs[2]['content'][0:2] + ' and I totally disagree with you.'
-
-    # nextSentenceCtx = ' '.join(sampleMsgs[2]['content'].split(' ')[0:CONTEXT_LEN])
-    # initial_prompt = f"Context: \"{sampleMsgs[0]['content']} {sampleMsgs[1]['content']}\". Reply to the previous messages by completing the sentence: \"{nextSentenceCtx}\"" # Moderator introduction of the chat topic and first part of human reply
-# ------------------------------------------
-idx = 0
-
 # Helper class used to convert a dict into an object
 class obj:
     def __init__(self, dict1):
@@ -387,6 +273,7 @@ class obj:
     def __setitem__(self, k, v):
         self.__dict__[k] = v
 
+# Sequentially process suggestion requests
 async def process_item(name, item):
     global queue
     data = item['data']
@@ -394,7 +281,7 @@ async def process_item(name, item):
 
     print(f'{name} received a command to "{data.command}" for {data.pairId}!', flush=True)
 
-    if data.command == 'autocomplete':
+    if data.command == 'suggest':
         data.incomplete_msg = data.incomplete_msg.strip() # Removes extraneous spaces from input
 
         pairId = data.pairId
@@ -412,9 +299,7 @@ async def process_item(name, item):
         msgHistory = pair_msg_history[pairId]
 
         if len(msgHistory) > 0:
-            # for partial_reply in run_ai_autocomplete(msgHistory, topic, pairType, topicAgree, MODE, pairId):
-            #     await websocket.send(json.dumps({'partial_reply': partial_reply, 'idx': idx}))
-            output = run_ai_autocomplete(msgHistory, topic, pairType, topicAgree, MODE, pairId)
+            output = run_ai_suggest(msgHistory, topic, pairType, topicAgree, MODE, pairId)
             await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
 
         await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
@@ -438,7 +323,7 @@ async def process_item(name, item):
         msgHistory = data.history
 
         if len(msgHistory) > 0:
-            # for partial_reply in run_ai_autocomplete(msgHistory, topic, pairType, topicAgree, MODE, pairId):
+            # for partial_reply in run_ai_suggest(msgHistory, topic, pairType, topicAgree, MODE, pairId):
             #     await websocket.send(json.dumps({'partial_reply': partial_reply, 'idx': idx}))
             output = run_ai_rewrite(data.history, topic, pairType, topicAgree, MODE, pairId)
             await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
@@ -446,9 +331,6 @@ async def process_item(name, item):
         await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
         if (pairId in pair_metadata):
             pair_metadata[pairId]['idx'] += 1
-        queue.task_done()
-    elif data.command == 'update_history':
-        run_ai_analysis(data.msgHistory)
         queue.task_done()
     
     print(f'{name} finished "{data.command}" for {data.pairId}!', flush=True)
@@ -464,114 +346,7 @@ async def worker(name):
             await process_item(name, item)
         except Exception as e:
             print(traceback.format_exc(), flush=True)
-        continue
-        
-        if (len(msgHistory) == 0):
-            # Do not suggest messages if there is no chat history
-            print('\n----------[NO MSG HISTORY]---------', flush=True)
-            continue
-        if (msgHistory[-1].personId != 2):
-            # Do not suggest messages unless the last person to talk was the partner
-            print('\n----------[LAST SENDER NOT PARTNER]---------', flush=True)
-            continue
-
-        chatLogStr = ''
-        for msg in msgHistory:
-            personId = 'YOU'
-            if (msg.personId == 2):
-                personId = 'PARTNER:'
-            elif (msg.personId == -1):
-                personId = 'MODERATOR:'
-            chatLogStr += f'{personId}: {msg.txt}\n\n\n'
-
-        # Make pairType == 2 for personalized AI prompt
-        prompt = generatePrompt(chatLogStr, pairType, topic, topicAgree, TREATMENT_MODE)
-        
-        
-        history = [{
-            'role': 'user', 'content': prompt
-        }]
-        
-        # if (history[-1]['role'] == 'user'):
-        #     continue
-
-        # ------------------------------------------
-        # Full message generation history
-        # if TREATMENT_MODE == 'full':
-        #     history.append({
-        #             "role": "user",
-        #             "content": data.incomplete_msg
-        #         })
-        # # ------------------------------------------
-        # # Partial message generation history (autocompletion)
-        # elif TREATMENT_MODE == 'partial':
-        #     history.append({
-        #             "role": "user",
-        #             "content": f"Context: \"{data.incomplete_msg}\". Reply to the previous messages by completing the sentence: \"{data.incomplete_msg}\""
-        #         })
-        
-        # Generate autocompletion
-        word = ''
-        wait_for_closure = False
-        lastMsgNoCaps = False
-        punctuation_count = 0
-        trimming = True
-        for msg in reversed(msgHistory):
-            if msg.personId != 2 and msg.personId != -1:
-                if (not re.search(r'[A-Z]', msg.txt)):
-                    lastMsgNoCaps = True
-                break
-
-
-
-        for partial_reply in predict(prompt):
-            if lastMsgNoCaps:
-                partial_reply = partial_reply.lower()
-            
-            if trimming:
-                if partial_reply.find('\n') < 0:
-                    trimming = False
-                partial_reply = partial_reply.replace('\n', '')
-            
-            word += partial_reply
-            if (partial_reply.find(' ') >= 0):
-                
-                if len(word) > 20:
-                    # LLM Error condition: Generated nonsense word
-                    break
-                elif word.lower().find('partner:') != -1 or word.lower().find('you:') != -1:
-                    # LLM Error condition: Improperly continuing the chat
-                    break
-
-                if (wait_for_closure and (partial_reply.find(')') >= 0 or partial_reply.find('>') >= 0 or partial_reply.find(']') >= 0)):
-                    wait_for_closure = False
-                elif partial_reply.find('(') >= 0 or partial_reply.find('<') >= 0 or partial_reply.find('[') >= 0:
-                    wait_for_closure = True
-                elif (not re.search(r'[0-9]+[A-Za-z]|[A-Za-z]+[0-9]', word) and word.isascii()):
-                    await websocket.send(json.dumps({'partial_reply': word, 'idx': idx}))
-                    if re.search(r'[^A-Z]\w+\.|\?|\!', partial_reply):
-                        # Last word of sentence
-                        break
-                else:
-                    break
-            elif re.search(r'[^A-Z]\w+\.|\?|\!', partial_reply):
-                # Last word
-                await websocket.send(json.dumps({'partial_reply': word, 'idx': idx}))
-            
-            # Punctuation limit
-            # if re.search(r'[^A-Z]\w+[\.\?\!]|^[\.\?\!]', word):
-            #     punctuation_count += 1
-
-            word = ''
-            
-
-        if (pairId in pair_metadata):
-            pair_metadata[pairId]['idx'] += 1
-        await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
-
-        # Notify the queue that the "work item" has been processed.
-        queue.task_done()
-        print(f'{name} finished generating a thing!', flush=True)
+        continue   
 
 # Function used to process connections from clients
 async def handleInput(websocket):
@@ -590,11 +365,10 @@ async def handleInput(websocket):
             data = json.loads(message, object_hook=obj)
             # print(data.__dict__)
 
-            # Process "autocomplete" command
-            if data.command == 'update_history':                
+            # Process "update_history" command
+            if data.command == 'update_history':
                 pairId = data.pairId
                 
-
                 if pairId not in pair_metadata and hasattr(data, 'topic'):
                     pair_metadata[pairId] = {
                         'pairType': data.pairType,
@@ -612,18 +386,14 @@ async def handleInput(websocket):
                 if hasattr(data, 'msg'):
                     msgHistory = pair_msg_history[pairId]
                     newMsg = data.msg
-                    # newMsg.personId = data.personId
                     msgHistory.append(newMsg)
-                    data.msgHistory = msgHistory
-                    stuff = {'data': data, 'websocket': websocket}
-                    await queue.put(stuff)
                 await websocket.send(json.dumps({'success': True}))
-            # Process "autocomplete" command
-            if data.command == 'autocomplete':
+            # Process "suggest" command
+            elif data.command == 'suggest':
                 stuff = {'data': data, 'websocket': websocket}
                 await queue.put(stuff)
-            # Process "autocomplete" command
-            if data.command == 'rewrite':
+            # Process "rewrite" command
+            elif data.command == 'rewrite':
                 stuff = {'data': data, 'websocket': websocket}
                 await queue.put(stuff)
 
@@ -636,7 +406,7 @@ async def handleInput(websocket):
 async def main():
 
     worker_task = asyncio.create_task(worker('worker-1'))
-
+    
     # In the server, we use an encrypted connection
     if (os.getenv('DEPLOYMENT', default='prod') == 'prod'):
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -651,7 +421,6 @@ async def main():
         async with serve(handleInput, "", NLP_PORT):
             print('Running websocket server on port {}...'.format(NLP_PORT))
             await asyncio.Future()  # run forever
-
 
 # Run websocket server until we receive a keyboard interrupt
 if __name__ == '__main__':

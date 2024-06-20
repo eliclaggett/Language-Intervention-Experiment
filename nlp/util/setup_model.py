@@ -115,7 +115,6 @@ topics = [
 ]
 agreement_type = ['disagree', 'agree']
 
-belief_strings = 'evolution is a biological fact.' # TODO: Make this variable
 # System msgs for pair type
 # 0 - in-group
 # 1 - out-group

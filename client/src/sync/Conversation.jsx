@@ -33,7 +33,6 @@ import {
     keepStartCensorStrategy
 } from 'obscenity';
 
-// TODO: Remove next?
 export default function Conversation({next}) {
 
     // const timerMixin = TimerMixin();
@@ -692,7 +691,7 @@ export default function Conversation({next}) {
     }
 
     function handleEarlyFinish() {
-        // TODO: Implement early finish
+        
         // game.set(chatChannel, [...messages, {
         //     sender: '-'+playerId,
         //     sentTime: 'just now',

@@ -72,7 +72,6 @@ def run_model(prompt, args, model_args={}, skip_prompt=True):
 def run_ai_analysis(msg_history):
     # Run everything but generate autocomplete when we send a msg
     # Run everything including autocomplete when partner sends a message
-    # TODO: Run autocomplete by itself when we type
 
     # Chat log string
     chat_log = ''

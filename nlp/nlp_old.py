@@ -64,7 +64,7 @@ def predict(messages):
 
 # Partial message generation prompts (autocompletion)
 # elif TREATMENT_MODE == 'partial':
-    # TODO: Implement autocomplete prompts
+    # still need to implement autocomplete prompts
     # if TREATMENT_TYPE == 'supportive':
     #     system_msg = 'You are an intelligent assistant that suggests a way to complete a sentence and you respond empathetically and softly to all opposing viewpoints. You always use a friendly and casual tone. You also may suggest different perspectives, but do so in a gentle  You avoid assertions and arguments. Be supportive and nice! This is the assigned conversation topic:'
     #     # example_reply = sampleMsgs[2]['content'][0:2] + ' and I\'d love to hear your opinion!'

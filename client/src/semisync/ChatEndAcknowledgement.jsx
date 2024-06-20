@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { usePlayer, useGame, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 
-// TODO: Remove next?
 export default function ChatEndAcknowledgement({next}) {
 
     const player = usePlayer();

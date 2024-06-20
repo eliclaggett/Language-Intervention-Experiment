@@ -50,7 +50,6 @@ if (gameParams.treatmentType == 'suggestion') {
         
     </div>;
 } else if (gameParams.treatmentType == 'rewrite') {
-    // TODO: Implement tutorial for message rewrites
     treatmentDescription = <div>
         <Typography level="h3" textAlign="" sx={{pt:3}}>1) AI Suggestions</Typography>
         <Typography level="body-md">
@@ -79,7 +78,7 @@ if (gameParams.treatmentType == 'suggestion') {
         </div>
     </div>;
 } else if (gameParams.treatmentType == 'completion') {
-    // TODO: Implement tutorial for message autocompletions
+    // Not implemented
 }
 
   return (

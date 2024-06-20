@@ -12,7 +12,6 @@ import { useState, useEffect } from 'react';
 import { usePlayer, useGame, useStage, usePlayers, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
 
-// TODO: Remove next?
 export default function PartnerAnswer({next, back}) {
 
     const player = usePlayer();

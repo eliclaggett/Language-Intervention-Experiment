@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { usePlayer, useGame } from "@empirica/core/player/classic/react";
 import { formatMoney } from '../utils/formatting.js';
 
-// TODO: Remove next?
 export default function Problem({next}) {
 
     const player = usePlayer();

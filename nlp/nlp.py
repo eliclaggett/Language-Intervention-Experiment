@@ -261,7 +261,6 @@ def generate(params):
     lock.release()
     return output
 
-
 # Helper class used to convert a dict into an object
 class obj:
     def __init__(self, dict1):
@@ -272,81 +271,6 @@ class obj:
         return ''
     def __setitem__(self, k, v):
         self.__dict__[k] = v
-
-# Sequentially process suggestion requests
-async def process_item(name, item):
-    global queue
-    data = item['data']
-    websocket = item['websocket']
-
-    print(f'{name} received a command to "{data.command}" for {data.pairId}!', flush=True)
-
-    if data.command == 'suggest':
-        data.incomplete_msg = data.incomplete_msg.strip() # Removes extraneous spaces from input
-
-        pairId = data.pairId
-
-        pairType = 0
-        topic = 0
-        topicAgree = 0
-        idx = 0
-        if pairId in pair_metadata:
-            pairType = pair_metadata[pairId]['pairType']
-            topic = pair_metadata[pairId]['topic']
-            topicAgree = 0 if int(pair_metadata[pairId]['topicAgree']) < 3 else 1
-            idx = pair_metadata[pairId]['idx']
-
-        msgHistory = pair_msg_history[pairId]
-
-        if len(msgHistory) > 0:
-            output = run_ai_suggest(msgHistory, topic, pairType, topicAgree, MODE, pairId)
-            await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
-
-        await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
-        queue.task_done()
-        if (pairId in pair_metadata):
-            pair_metadata[pairId]['idx'] += 1
-    elif data.command == 'rewrite':
-
-        pairId = data.pairId
-        pairType = 0
-        topic = 0
-        topicAgree = 0
-        idx = 0
-        if pairId in pair_metadata:
-            pairType = pair_metadata[pairId]['pairType']
-            topic = pair_metadata[pairId]['topic']
-            topicAgree = 0 if int(pair_metadata[pairId]['topicAgree']) < 3 else 1
-            idx = pair_metadata[pairId]['idx']
-
-        # msgHistory = pair_msg_history[pairId]
-        msgHistory = data.history
-
-        if len(msgHistory) > 0:
-            # for partial_reply in run_ai_suggest(msgHistory, topic, pairType, topicAgree, MODE, pairId):
-            #     await websocket.send(json.dumps({'partial_reply': partial_reply, 'idx': idx}))
-            output = run_ai_rewrite(data.history, topic, pairType, topicAgree, MODE, pairId)
-            await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
-
-        await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
-        if (pairId in pair_metadata):
-            pair_metadata[pairId]['idx'] += 1
-        queue.task_done()
-    
-    print(f'{name} finished "{data.command}" for {data.pairId}!', flush=True)
-    return
-
-async def worker(name):
-    global queue
-    print(f'{name} was created!')
-    while True:
-        # Get a "work item" out of the queue.
-        item = await queue.get()
-        try:
-            await process_item(name, item)
-        except Exception as e:
-            print(traceback.format_exc(), flush=True)
-        continue   
 
 # Function used to process connections from clients
 async def handleInput(websocket):
@@ -363,7 +287,7 @@ async def handleInput(websocket):
         async for message in websocket:
             # Messages are received in JSON format, e.g., {command: "do_something", data: "data"}
             data = json.loads(message, object_hook=obj)
-            # print(data.__dict__)
+            print(f'{name} received a command to "{data.command}" for {data.pairId}!', flush=True)
 
             # Process "update_history" command
             if data.command == 'update_history':
@@ -388,14 +312,54 @@ async def handleInput(websocket):
                     newMsg = data.msg
                     msgHistory.append(newMsg)
                 await websocket.send(json.dumps({'success': True}))
-            # Process "suggest" command
+
             elif data.command == 'suggest':
-                stuff = {'data': data, 'websocket': websocket}
-                await queue.put(stuff)
-            # Process "rewrite" command
+                data.incomplete_msg = data.incomplete_msg.strip() # Removes extraneous spaces from input
+
+                pairId = data.pairId
+
+                pairType = 0
+                topic = 0
+                topicAgree = 0
+                idx = 0
+                if pairId in pair_metadata:
+                    pairType = pair_metadata[pairId]['pairType']
+                    topic = pair_metadata[pairId]['topic']
+                    topicAgree = 0 if int(pair_metadata[pairId]['topicAgree']) < 3 else 1
+                    idx = pair_metadata[pairId]['idx']
+
+                msgHistory = pair_msg_history[pairId]
+
+                if len(msgHistory) > 0:
+                    output = run_ai_suggest(msgHistory, topic, pairType, topicAgree, MODE, pairId)
+                    await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
+
+                await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
+                queue.task_done()
+                if (pairId in pair_metadata):
+                    pair_metadata[pairId]['idx'] += 1
             elif data.command == 'rewrite':
-                stuff = {'data': data, 'websocket': websocket}
-                await queue.put(stuff)
+
+                pairId = data.pairId
+                pairType = 0
+                topic = 0
+                topicAgree = 0
+                idx = 0
+                if pairId in pair_metadata:
+                    pairType = pair_metadata[pairId]['pairType']
+                    topic = pair_metadata[pairId]['topic']
+                    topicAgree = 0 if int(pair_metadata[pairId]['topicAgree']) < 3 else 1
+                    idx = pair_metadata[pairId]['idx']
+
+                msgHistory = data.history
+
+                if len(msgHistory) > 0:
+                    output = run_ai_rewrite(data.history, topic, pairType, topicAgree, MODE, pairId)
+                    await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
+
+                await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
+                if (pairId in pair_metadata):
+                    pair_metadata[pairId]['idx'] += 1
 
     # Process when the client disconnects            
     except websockets.exceptions.ConnectionClosedError:    
@@ -404,8 +368,6 @@ async def handleInput(websocket):
         connected.remove(websocket)
 
 async def main():
-
-    worker_task = asyncio.create_task(worker('worker-1'))
     
     # In the server, we use an encrypted connection
     if (os.getenv('DEPLOYMENT', default='prod') == 'prod'):

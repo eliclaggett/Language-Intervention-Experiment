@@ -22,8 +22,6 @@ import { GasMeterOutlined } from '@mui/icons-material';
 
 // import { Chat } from "@empirica/chat";
 
-
-// TODO: Remove next?
 export default function PreEvaluation({next}) {
 
     const player = usePlayer();

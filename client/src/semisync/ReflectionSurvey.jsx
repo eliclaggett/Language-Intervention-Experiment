@@ -35,8 +35,7 @@ const topics = [
     "Restrictions to stop the spread of COVID-19 went too far",
     "I want stricter immigration requirements into the U.S."
 ];
-// TODO: Remove next?
-// TODO: Add timer
+
 export default function ReflectionSurvey({ next }) {
 
     const player = usePlayer();
