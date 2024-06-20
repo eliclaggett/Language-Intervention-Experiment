@@ -42,12 +42,13 @@ const gameParams = {
   shareMultiplier: 1.5,
   
   // Experiment parameters
-  samplingType: 'within', // within, between (passed pre-eval or not)
+  
   treatmentType: 'suggestion', // completion, suggestion, rewrite, none
-  suggestionProbability: 0.75,
+  treatmentAlgorithm: 'personal', // relational, personal
+  suggestionProbability: 1,
 
   // Configuration
-  numMsgsFinishEarly: 25,
+  numMsgsFinishEarly: 30,
 
   // Timing
   chatTime: 10,
@@ -61,6 +62,7 @@ const gameParams = {
   partnerAnswerTime: 2,
 
   // Misc. global variables
+  samplingType: 'within' // within, between (passed pre-eval or not)
 };
 
 const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/' + process.env['EXPERIMENT_NAME'] + '/texts.json'))

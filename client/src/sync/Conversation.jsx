@@ -25,6 +25,14 @@ import { Hint } from'../utils/react-autocomplete-hint/dist/src/index.js'; // Use
 import TimerMixin from 'react-timer-mixin';
 import TaskInstructions from '../components/TaskInstructions.jsx';
 
+import {
+	RegExpMatcher,
+	TextCensor,
+	englishDataset,
+	englishRecommendedTransformers,
+    keepStartCensorStrategy
+} from 'obscenity';
+
 // TODO: Remove next?
 export default function Conversation({next}) {
 
@@ -46,6 +54,10 @@ export default function Conversation({next}) {
     const earlyFinishTimeLeft = player.get('earlyFinishTime');
     const conversationStartTime = game.get('conversationStartTime');
     const cooperationDiscussionStartTime = game.get('cooperationDiscussionStartTime');
+    const matcher = new RegExpMatcher({
+        ...englishDataset.build(),
+        ...englishRecommendedTransformers,
+    });
 
     const topic = player.get('topic') || 'q1';
     const opinionSurveyResponses = player.get('submitOpinionSurvey');
@@ -102,7 +114,7 @@ export default function Conversation({next}) {
     // Setup communication with Python server
     useEffect(() => {
 
-        window.autocompletion = undefined;
+        window.suggestion = undefined;
         window.canRequestAutocomplete = true;
         window.requestRewrite = false;
 
@@ -121,7 +133,8 @@ export default function Conversation({next}) {
                 pairType: pairType,
                 history: histMsgs,
                 topic: parseInt(topic.substring(1))-1,
-                topicAgree: opinionStrength
+                topicAgree: opinionStrength,
+                treatmentAlgorithm: gameParams.treatmentAlgorithm
             }), true);
         }
 
@@ -132,10 +145,10 @@ export default function Conversation({next}) {
             const data = JSON.parse(msg.data);
             
             if(data.idx != window.suggestionIdx) {
-                window.autocompletion = '';
+                window.suggestion = '';
                 window.suggestionIdx = data.idx;
             }
-            let currentAutocompletion = typeof(window.autocompletion) === 'undefined' || window.autocompletion == 'undefined' ? '' : window.autocompletion;
+            let currentSuggestion = typeof(window.suggestion) === 'undefined' || window.suggestion == 'undefined' ? '' : window.suggestion;
             
             // Get autocompleted text
             let partial_reply = data.partial_reply;
@@ -147,24 +160,49 @@ export default function Conversation({next}) {
 
             // Store autocompleted text
             if (partial_reply != '[EOS]') {
-                currentAutocompletion += partial_reply;
+                currentSuggestion += partial_reply;
+                window.suggestion = currentSuggestion;
             } else {
-                player.set('showSuggestion', currentAutocompletion);
+
+                // Remove 'You: '
+                if (currentSuggestion.slice(0, 4).toLowerCase() == 'you:') {
+                    currentSuggestion = currentSuggestion.slice(currentSuggestion.indexOf(':')+1).trim();
+                }
+
+                // Remove surrounding quotes
+                if (currentSuggestion[0] == '"' && currentSuggestion[-1] == '"') {
+                    currentSuggestion = currentSuggestion.slice(1,-1);
+                }
+
+                // Convert to lowercase to match participant's style
+                let convertToLowercase = false;
+                for(let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].sender == playerId) {
+                        if (messages[i].txt === messages[i].txt.toLowerCase()) convertToLowercase = true;
+                        break;
+                    }
+                }
+                if (convertToLowercase) currentSuggestion = currentSuggestion.toLowerCase();
+
+
+                
+                currentSuggestion = currentSuggestion.replace('PARTNER', 'partner');
+                
+                // Remove obscenities
+                const asteriskStrategy = (ctx) => '*'.repeat(ctx.matchLength);
+                const censor = new TextCensor().setStrategy(keepStartCensorStrategy(asteriskStrategy));
+                const matches = matcher.getAllMatches(currentSuggestion);
+                currentSuggestion = censor.applyTo(currentSuggestion, matches);
+                
+                if (currentSuggestion != 'undefined') {
+                    window.suggestion = currentSuggestion;
+                }
+
+                console.log(currentSuggestion);
+                player.set('showSuggestion', currentSuggestion);
+                setAutocompleteOptions([currentSuggestion]);
                 window.requestRewrite = false;
             }
-
-            if (currentAutocompletion.slice(0, 4).toLowerCase() == 'you:') {
-                currentAutocompletion = currentAutocompletion.slice(currentAutocompletion.indexOf(':')+1).trim();
-            }
-            
-            currentAutocompletion = currentAutocompletion.replace('PARTNER', 'partner');
-            
-            if (currentAutocompletion != 'undefined') {
-                window.autocompletion = currentAutocompletion;
-            }
-
-
-            setAutocompleteOptions([currentAutocompletion]);
           };
 
         // Send a message to the server if the user has stopped typing for a couple seconds
@@ -174,8 +212,8 @@ export default function Conversation({next}) {
             game.set(typingChannel, updateTypingStatus(participantIdx, false));
 
             // Send a message to the Python server asking for an autocompletion
-            // if (window.autocompletion === undefined && window.canRequestAutocomplete == true) {
-            //     window.autocompletion = '';
+            // if (window.suggestion === undefined && window.canRequestAutocomplete == true) {
+            //     window.suggestion = '';
             //     wsSend(JSON.stringify({
             //         command: 'autocomplete',
             //         pairId: player.id,
@@ -285,7 +323,8 @@ export default function Conversation({next}) {
                         personId: personId,
                         msg: msg,
                         topic: parseInt(topic.substring(1))-1,
-                        topicAgree: opinionStrength
+                        topicAgree: opinionStrength,
+                        treatmentAlgorithm: gameParams.treatmentAlgorithm
                     }), true);
                 }
                 
@@ -318,18 +357,18 @@ export default function Conversation({next}) {
             // - The last message was sufficiently long?
             // - There's been a long pause
             // - We are in the main conversation step (not the bonus discussion)
-            window.autocompletion = '';
+            window.suggestion = '';
             if (rngPerMessage <= gameParams.suggestionProbability) {
                 TimerMixin.setTimeout(() => {
                     wsSend(JSON.stringify({
-                        command: 'autocomplete',
+                        command: 'suggest',
                         pairId: player.id,
                         incomplete_msg: valueRef.current
                     }));
                 }, 5000);
             }
         } else {
-            window.autocompletion = '';
+            window.suggestion = '';
             setAutocompleteOptions(['']);
         }
         setRngPerMessage(Math.random());
@@ -362,7 +401,7 @@ export default function Conversation({next}) {
         setText('');
         setEditingMsg(false);
         window.canRequestAutocomplete = true;
-        window.autocompletion = undefined;
+        window.suggestion = undefined;
 
         game.set(typingChannel, updateTypingStatus(participantIdx, false));
     }
@@ -404,7 +443,7 @@ export default function Conversation({next}) {
         // setAutocompleteOptions(['']);
         // setText('');
         // window.canRequestAutocomplete = true;
-        // window.autocompletion = undefined;
+        // window.suggestion = undefined;
 
         game.set(typingChannel, updateTypingStatus(participantIdx, false));
 
@@ -504,6 +543,23 @@ export default function Conversation({next}) {
         window.canRequestAutocomplete = false;
         player.set('acceptSuggestion', autocompleteOptions[0]);
     }
+    const handleSendSuggestion = () => {
+        player.set('acceptSuggestion', autocompleteOptions[0]);
+
+        game.set(chatChannel, [...messages, {
+            sender: playerId,
+            sentTime: 'just now',
+            txt: autocompleteOptions[0]
+        }]);
+
+        setAutocompleteOptions(['']);
+        setText('');
+        setEditingMsg(false);
+        window.canRequestAutocomplete = true;
+        window.suggestion = undefined;
+
+        game.set(typingChannel, updateTypingStatus(participantIdx, false));
+    }
     const handleRewriteClick = () => {
         setText(autocompleteOptions[0]);
         setAutocompleteOptions(['']);
@@ -572,7 +628,9 @@ export default function Conversation({next}) {
                 {/* <textarea value={autocompleteOptions[0]}></textarea> */}
                 <div onClick={handleSuggestionClick}>{autocompleteOptions[0]}</div>
             </div>
-            <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
+            <IconButton variant="plain" onClick={handleSendSuggestion}>
+                <SendRounded />
+            </IconButton>;
         </div>;
     } else if (gameParams.treatmentType == 'rewrite' && !editingMsg && rngPerMessage <= gameParams.suggestionProbability) {
         rewriteUI = <div className={suggestionClass}>
@@ -589,8 +647,9 @@ export default function Conversation({next}) {
         keyDownHandler = handleScheduleKeyDown; 
     }
 
+    // FUTURE: Undo disabling the autocomplete hint
     let msgSendUI = <div className='msgSend'>
-        <Hint options={autocompleteOptions} allowTabFill={true} onFill={handleAutocompleteFill}>
+        <Hint options={[]} allowTabFill={true} onFill={handleAutocompleteFill}>
             <textarea rows={1} value={text} onChange={handleChange} onKeyDown={keyDownHandler} className='hintedText' placeholder='Type a message here'></textarea>
             {/* <input type="text" placeholder="Type a message here" value={text} onChange={handleChange} onKeyDown={handleKeyDown}/> */}
         </Hint>

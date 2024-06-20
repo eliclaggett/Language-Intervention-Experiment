@@ -148,7 +148,7 @@ textarea:focus {
 }
 .msgSend.treatment button {
   background: none !important;
-  cursor: initial !important;
+  /* cursor: initial !important; */
 }
 .msgSend.treatment.hidden {
   transform: scaleY(0);
@@ -413,9 +413,17 @@ textarea:focus {
   background-color: rgb(103, 215, 126) !important;
   cursor: initial;
 }
-
+.bottomLog {
+  display: none !important;
+}
 @media screen and (max-width: 1015px) {
   .reflectionSurveyHeaderTxt::after {
     content: ' Your chat log is provided at the bottom of the page for reference.'
+  }
+  .rightLog {
+    display: none !important;
+  }
+  .bottomLog {
+    display: flex !important;
   }
 }

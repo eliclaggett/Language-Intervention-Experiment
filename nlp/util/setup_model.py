@@ -139,24 +139,24 @@ def generate_template(prompt, args):
 def getLinguisticTechniques(pairType, topicAgree, topic):
     t = ''
 
-    belief_str = f'You {agreement_type[topicAgree]} with {topics[topic]}'
+    belief_str = f'{agreement_type[topicAgree]} with {topics[topic]}'
     if pairType < 2:
         # Relational
         if pairType == 0:
             # In-group
 
             # t = f"{belief_str} and your partner has the same opinion. Since you and your partner have a shared ideology, use linguistic style matching and linguistic accomodation techniques to build closeness with your partner. Copy the language style of your partner as closely as possible."
-            t = f"Since you and your partner have a shared ideology, use linguistic style matching and linguistic accomodation techniques to build closeness with your partner. Copy the language style of your partner as closely as possible."
+            t = f" Since you and your partner have a shared ideology, use linguistic style matching and linguistic accomodation techniques to build closeness with your partner. Copy the language style of your partner as closely as possible."
             pass
         else:
             # t = f"{belief_str} but your partner feels differently. Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
-            t = f"Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
+            t = f" Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
             # Out-group
             pass
     else:
         # Personalized
         # t = {agreement_type[topicAgree]} with {topics[topic]}'
-        t = "{belief_str}. Mirror the language style of the person labeled \"YOU\" as closely as possible."
+        t = f" Mirror the language style of the person labeled \"YOU\" and others who also {belief_str} as closely as possible."
         pass
     return t
 

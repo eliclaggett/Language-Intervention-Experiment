@@ -37,13 +37,17 @@ if (gameParams.treatmentType == 'suggestion') {
             This is how they will appear:
         </Typography>
 
-        <div className='msgSend treatment example'>
-            <span>Suggestion (click to copy)</span>
-            <div className="input-wrapper">
-                <div>Example suggested message</div>
+        
+            <div className='msgSend treatment example' style={{maxWidth: '30rem', marginLeft: 'auto', marginRight: 'auto'}}>
+                <span>Suggestion (click to copy)</span>
+                <div className="input-wrapper">
+                    <div>Example suggested message</div>
+                </div>
+                <IconButton variant="plain">
+                    <SendRounded />
+                </IconButton>;
             </div>
-            <IconButton variant='plain' size="sm">&#x1F916;</IconButton>
-        </div>
+        
     </div>;
 } else if (gameParams.treatmentType == 'rewrite') {
     // TODO: Implement tutorial for message rewrites

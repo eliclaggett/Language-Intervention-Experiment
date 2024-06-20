@@ -6,7 +6,7 @@
  * This ReactJS file surveys participants about their understanding of the chat and attitude toward their partner(s).
  */
 import * as React from 'react';
-import { Button, Box, Container, Grid, Typography, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup, Textarea, Select, Slider, Option, Card } from '@mui/joy';
+import { Button, Box, Container, Grid, Typography, Sheet, Stack, FormControl, FormLabel, FormHelperText, Radio, RadioGroup, Textarea, Select, Slider, Option, Card } from '@mui/joy';
 import { useState, useEffect } from 'react';
 import { usePlayer, useGame, useStage, usePlayers, usePartModeCtx, useStageTimer } from "@empirica/core/player/classic/react";
 import { formatMoney, msToTime } from '../utils/formatting.js';
@@ -14,6 +14,7 @@ import { formatMoney, msToTime } from '../utils/formatting.js';
 import '../chat.scss';
 import { MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
 import LikertQuestion from '../components/LikertQuestion.jsx';
+import IOSQuestion from '../components/IOSQuestion.jsx';
 
 
 const followups = [
@@ -74,10 +75,12 @@ export default function ReflectionSurvey({ next }) {
     const [income, setIncome] = useState(null);
     const [opinionChangeValue, setOpinionChangeValue] = useState(null);
     const [conversationDifficultyValue, setConversationDifficultyValue] = useState(null);
+    const [aiIOS, setAIIOS] = useState(null);
+    const [partnerIOS, setPartnerIOS] = useState(null);
     // const [isDisabled, setIsDisabled] = useState(true);
 
     const isDisabled = (step == 1 && (!partnerOpinion || !feelingThermometer || !conversationDifficultyValue || !opinionChangeValue)) ||
-                        (step == 2 && (!politics || (gameParams.treatmentType != 'none' && !suggestionReaction)));
+                        (step == 2 && (!politics));
 
     const feelingThermometerMarks = [
         {
@@ -161,7 +164,11 @@ export default function ReflectionSurvey({ next }) {
                 race: race,
                 school: school,
                 income: income,
-                suggestionReaction: suggestionReaction
+                suggestionReaction: suggestionReaction,
+                difficulty: conversationDifficultyValue,
+                opinionSurvey: opinionChangeValue,
+                partnerIOS: partnerIOS,
+                aiIOS: aiIOS
             });
             game.set('partnerAnswer', {
                 playerId: player.id,
@@ -181,7 +188,7 @@ export default function ReflectionSurvey({ next }) {
     }, [feelingThermometer]);
 
     let timeLeftTxt = '';
-    if (stage.get('name') == 'semi_asynchronous_steps') {
+    if (stage && stage.get('name') == 'semi_asynchronous_steps') {
         let timeLeft = stageTimer?.remaining ? stageTimer.remaining : 0;
         timeLeftTxt = <span style={{color:'rgb(102, 93, 245)'}}>{msToTime(timeLeft)} remaining to finish the survey.<br /></span>;
     }
@@ -192,13 +199,20 @@ export default function ReflectionSurvey({ next }) {
     function handleDifficultyChange(e) {
         setConversationDifficultyValue(e.target.value);
     }
+    function handlePartnerIOSChange(e) {
+        setPartnerIOS(e.target.value);
+    }
+    function handleAIIOSChange(e) {
+        setAIIOS(e.target.value);
+    }
 
-    let stepUI = <Stack sx={{
+    let stepUI = <>
+    <Stack sx={{
         maxWidth: '50%',
         minWidth: '34rem',
         mx: 'auto',
         mt: '10rem',
-    }} gap={6} >
+    }} gap={6}>
         <div>
             <Typography level="h2">Reflection Survey</Typography>
             <Typography level="body-md" className='reflectionSurveyHeaderTxt'>
@@ -233,7 +247,28 @@ export default function ReflectionSurvey({ next }) {
             <LikertQuestion name='conversationDifficulty' prompt='' onChange={handleDifficultyChange} value={conversationDifficultyValue} type="difficulty"/>
             {/* <FormHelperText>This is a helper text.</FormHelperText> */}
         </FormControl>
-        <div>
+    </Stack>
+    <Stack
+    sx={{
+        minWidth: '20rem',
+        width: '20%',
+        // maxWidth: 'calc(50% - 2em)',
+        maxWidth: 'calc(100% - 33rem)',
+        mt: '10rem',
+        justifySelf: 'center',
+        mx: 'auto'
+        }} className="rightLog">
+    <Typography level='h2' sx={{mb: 1}}>Chat Log</Typography>
+    <MainContainer style={{ maxHeight: '50rem' }}>
+        <ChatContainer style={{height: '100%'}}>       
+            <MessageList>
+                {chatLog}
+            </MessageList>
+        </ChatContainer>
+    </MainContainer>
+    </Stack>
+    <Stack gap={4} sx={{pt: 4, px: 3}}>
+    <div>
         <Typography level="h3">How would you rate your feelings toward your partner?</Typography>
         <Box sx={{ height: 200, mt: 3 }}>
             <Slider
@@ -249,14 +284,41 @@ export default function ReflectionSurvey({ next }) {
                 onChange={handleSliderChange}
             />
         </Box>
+        
         </div>
+        <Typography level="h3" sx={{pt: 2}}>Select the picture below which best describes your relationship with your <span style={{color:'rgb(102, 93, 245)'}}>partner</span>.</Typography>
+        <IOSQuestion onChange={handlePartnerIOSChange} value={partnerIOS} type='partner'/>
+        <Typography level="h3" sx={{pt: 2}}>Select the picture below which best describes your relationship with the <span style={{color:'rgb(102, 93, 245)'}}>AI</span>.</Typography>
+        <IOSQuestion onChange={handleAIIOSChange} value={aiIOS} type='ai'/>
+        
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row' }}>
             <Button sx={{ my: 2 }} onClick={handleButtonClick} disabled={isDisabled}>Continue</Button>
         </Box>
-    </Stack>;
+    </Stack>
+    <Stack
+    sx={{
+        minWidth: '20rem',
+        width: '20%',
+        // maxWidth: 'calc(50% - 2em)',
+        maxWidth: 'calc(100% - 33rem)',
+        mt: '10rem',
+        justifySelf: 'center',
+        mx: 'auto'
+        }} className="bottomLog">
+    <Typography level='h2' sx={{mb: 1}}>Chat Log</Typography>
+    <MainContainer style={{ maxHeight: '50rem' }}>
+        <ChatContainer style={{height: '100%'}}>       
+            <MessageList>
+                {chatLog}
+            </MessageList>
+        </ChatContainer>
+    </MainContainer>
+    </Stack>
+    </>;
 
     if (step == 2) {
-        stepUI = <Stack sx={{
+        stepUI = <>
+        <Stack sx={{
             maxWidth: '50%',
             mx: 'auto',
             mt: '10rem',
@@ -268,12 +330,12 @@ export default function ReflectionSurvey({ next }) {
                     Please answer the following questions. (2/2)
                 </Typography>
             </div>
-            <FormControl sx={{display: gameParams.treatmentType != 'none' ? 'flex' : 'none'}}>
+            {/* <FormControl sx={{display: gameParams.treatmentType != 'none' ? 'flex' : 'none'}}>
                 <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
                     What is your reaction to the reply suggestions?<span className="textRed">*</span>
                 </FormLabel>
                 <Textarea minRows={3} value={suggestionReaction} onChange={(e) => { setSuggestionReaction(e.target.value);} } placeholder="Type answer here"/>
-            </FormControl>
+            </FormControl> */}
             <FormControl>
                 <FormLabel id="select-field-demo-label" htmlFor="select-field-demo-button">
                     What is your political affiliation?<span className="textRed">*</span>
@@ -367,19 +429,7 @@ export default function ReflectionSurvey({ next }) {
                 <Button sx={{ my: 2 }} onClick={handleButtonClick} disabled={isDisabled}>Continue</Button>
             </Box>
         </Stack>
-    }
-
-
-    return (
-        <Grid maxWidth="100vw" sx={{
-            width: '85%',
-            maxWidth: '60rem',
-            minWidth: '40rem',
-            mx: 'auto'
-        }}
-        container>
-            {stepUI}
-            <Stack
+        <Stack
             sx={{
                 minWidth: '20rem',
                 width: '20%',
@@ -398,6 +448,20 @@ export default function ReflectionSurvey({ next }) {
                 </ChatContainer>
             </MainContainer>
             </Stack>
+        </>
+    }
+
+
+    return (
+        <Grid maxWidth="100vw" sx={{
+            width: '85%',
+            maxWidth: '60rem',
+            minWidth: '40rem',
+            mx: 'auto'
+        }}
+        container>
+            {stepUI}
+            
         </Grid>
     );
 }

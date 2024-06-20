@@ -15,6 +15,7 @@
     "dotenv": "^16.4.5",
     "esbuild": "0.17.15",
     "find-config": "^1.0.0",
+    "obscenity": "^0.2.1",
     "react": "^18.2.0",
     "react-autocomplete-hint": "^2.0.0",
     "react-chartjs-2": "^5.2.0",
