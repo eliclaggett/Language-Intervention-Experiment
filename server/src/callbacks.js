@@ -32,7 +32,7 @@ const completionCodes = {
 };
 
 const gameParams = {
-  version: 'March 2024',
+  version: 'June 2024',
   
   // Payouts
   task1Pay: 3,
@@ -42,9 +42,8 @@ const gameParams = {
   shareMultiplier: 1.5,
   
   // Experiment parameters
-  
-  treatmentType: 'suggestion', // completion, suggestion, rewrite, none
-  treatmentAlgorithm: 'personal', // relational, personal
+  treatmentType: 'suggestion', // suggestion, none (previously completion, suggestion, rewrite, none)
+  treatmentAlgorithm: 'relational', // relational, personal
   suggestionProbability: 1,
 
   // Configuration
@@ -52,10 +51,8 @@ const gameParams = {
 
   // Timing
   chatTime: 10,
-  // chatTime: 99, // TEST ONLY
   followupDelay1: 3,
   followupDelay2: 3,
-  
   cooperationDiscussionTime: 3,
   cooperationTime: 3,
   reflectionSurveyTime: 7,
@@ -203,10 +200,10 @@ Empirica.onGameStart(({ game }) => {
 
     if (typeof(pairs[player.id]) == 'undefined' || pairs[player.id] == -1) {
       // Could not pair player
-      console.log('could not pair player',player.id);
+      console.log('could not pair player', player.get('participantIdentifier'));
       player.set('end', true);
       player.set('endReason', 'noPair');
-      player.exit('noPair');
+      // player.exit('noPair');
       continue;
     }
 
@@ -237,7 +234,6 @@ Empirica.onGameStart(({ game }) => {
     partner.set('partnerId', player.id);
     partner.set('topic', topics[partner.id]);
     partner.set('completionCode', completionCodes['task2']);
-    // partner.set('partnerAnswer', '');
     partner.set('group', groups[partner.id]);
     partner.set('partnerGroup', groups[player.id]);
 
@@ -257,6 +253,7 @@ Empirica.onStageStart(({ stage }) => {
 });
 
 Empirica.onStageEnded(({ stage }) => {
+  console.log('stage ended');
   // console.log(stage);
   // for (const player of stage.currentGame.players) {
     // player.set('serverChatEnded', true);
@@ -399,8 +396,6 @@ Empirica.on("player", "sendPreEvalMsg", (ctx, { player, sendPreEvalMsg }) => {
 });
 
 Empirica.on("player", "submitOpinionSurvey", (ctx, { player, submitOpinionSurvey }) => {
-  submittedOpinionSurvey.add(player.id);
-
   // console.log(submitOpinionSurvey);
   let hasSomeOpinion = false;
   for (const q in submitOpinionSurvey) {
@@ -412,6 +407,8 @@ Empirica.on("player", "submitOpinionSurvey", (ctx, { player, submitOpinionSurvey
     player.set('end', true);
     player.set('endReason', 'noOpinion');
     player.exit('noOpinion');
+  } else {
+    submittedOpinionSurvey.add(player.id);
   }
   
 });

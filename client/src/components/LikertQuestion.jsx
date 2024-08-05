@@ -41,6 +41,29 @@ export default function LikertQuestion({
             </FormControl>
         </div>);
     }
+    if (type == 'strength') {
+        return (<div>
+            <FormControl>
+                <FormLabel></FormLabel>
+                <RadioGroup
+                    overlay
+                    name={name}
+                    value={value}
+                    orientation="horizontal"
+                    sx={{ display: 'flex', flexDirection: 'row', mx: 'auto' }}
+                    onChange={onChange}
+                >
+                    <LikertButton label="Very weak" value="0" disabled={disabled} />
+                    <LikertButton label="Weak" value="1" disabled={disabled} />
+                    <LikertButton label="Slightly weak" value="2" disabled={disabled} />
+                    <LikertButton label="Average" value="3" disabled={disabled} />
+                    <LikertButton label="Slightly strong" value="4" disabled={disabled} />
+                    <LikertButton label="Strong" value="5" disabled={disabled} />
+                    <LikertButton label="Very strong" value="6" disabled={disabled} />
+                </RadioGroup>
+            </FormControl>
+        </div>);
+    }
     return (
         <div>
             <Typography level="h3">{prompt}</Typography>

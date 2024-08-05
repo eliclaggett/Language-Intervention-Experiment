@@ -25,10 +25,16 @@
 #
 ################################################################################
 
+
+if test -f RUNNING_PID
+then
+kill `cat RUNNING_PID`
+fi
+
 echo $$ > RUNNING_PID
 
 current_dir=$(pwd)
-dt=$(date +%F)
+dt=$(date +"%F_%T")
 
 # Load .env variables
 set -a            
@@ -51,7 +57,7 @@ fi
 
 echo "Running Empirica and Python in '${DEPLOYMENT}' mode"
 # Run Empirica
-if [ "$DEPLOYMENT" == "dev" ]
+if [ "$DEPLOYMENT" == "dev1" ]
 then
     { empirica -s ":${PORT_EMPIRICA}" --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" & }
     pid1=$!

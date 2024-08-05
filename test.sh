@@ -15,7 +15,7 @@ if which pyenv-virtualenv-init > /dev/null; then eval "$(pyenv virtualenv-init -
 rm .empirica/local/tajriba.json
 
 # Run Empirica
-{ emp -s ":${PORT_EMPIRICA}" --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" & }
+{ emp -s ":${PORT_EMPIRICA}" --server.proxyaddr "http://127.0.0.1:${PORT_EMPIRICA_PROXY}" -a ":${PORT_TAJRIBA}" --log.level trace & }
 pid1=$!
 echo $pid1 >> RUNNING_PID
 

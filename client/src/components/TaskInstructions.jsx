@@ -31,7 +31,7 @@ export default function TaskInstructions({
 
 if (gameParams.treatmentType == 'suggestion') {
     treatmentDescription = <div>
-        <Typography level="h3" textAlign="" sx={{pt:3}}>1) AI Suggestions</Typography>
+        <Typography level="h3" textAlign="" sx={{pt:6, pb:1}}>1) AI Suggestions</Typography>
         <Typography level="body-md">
             If you are having trouble wording a message or continuing the conversation, we occasionally provide AI suggestions that you can use to keep the conversation going.
             This is how they will appear:
@@ -45,13 +45,13 @@ if (gameParams.treatmentType == 'suggestion') {
                 </div>
                 <IconButton variant="plain">
                     <SendRounded />
-                </IconButton>;
+                </IconButton>
             </div>
         
     </div>;
 } else if (gameParams.treatmentType == 'rewrite') {
     treatmentDescription = <div>
-        <Typography level="h3" textAlign="" sx={{pt:3}}>1) AI Suggestions</Typography>
+        <Typography level="h3" textAlign="" sx={{pt:6, pb:1}}>1) AI Suggestions</Typography>
         <Typography level="body-md">
             We occasionally provide AI suggestions to rephrase your messages using language that will better engage your partner. You may choose to use them, ignore them, or edit your messages after seeing them.
             They will appear below the chat window like so:
@@ -90,16 +90,18 @@ if (gameParams.treatmentType == 'suggestion') {
                 mx: 'auto',
                 textAlign: 'left'
             }}>
-            <Typography level="h2" textAlign="center" sx={{pb:2}}>Conversation Task</Typography>
+            <Typography level="h2" textAlign="center" sx={{pb:2}}>Communication Task</Typography>
             <Typography level="body-md">
 
                 You will be provided {gameParams.chatTime} minutes to discuss an assigned topic with your partner.
-                Remember that your goal is to adequately grasp your partner's opinions on the topic while also sharing your own. You must send multiple messages to be paid for your participation.
+                Remember that your goal is to adequately communicate your stance towards the topic and provide an argument supporting your views.
+                You and your partner will evaluate each other's arguments. We will then aggregate and analyze the arguments of all participants who have similar viewpoints.
+                You must send multiple messages to be paid for your participation.
                 <br /><br />
                 We provide the following features to help you out:
             </Typography>
             {treatmentDescription}
-            <Typography level="h3" textAlign="" sx={{pt:2}}>2) Early Finish</Typography>
+            <Typography level="h3" textAlign="" sx={{pt:6, pb:1}}>2) Early Finish</Typography>
             <Typography level="body-md">
                 We understand that some people type faster than others.
                 <br />
@@ -108,7 +110,7 @@ if (gameParams.treatmentType == 'suggestion') {
             <Container sx={{textAlign: 'center', fontSize: 16, fontWeight: 'bold', transform: 'scale(2)', pt: 3}}>
                 <QuestionAnswerOutlined /> x{gameParams.numMsgsFinishEarly}
             </Container>
-            <Typography level="h3" textAlign="" sx={{pt:6}}>3) Safety</Typography>
+            <Typography level="h3" textAlign="" sx={{pt:8, pb:1}}>3) Safety</Typography>
             <Typography level="body-md">
                 In the event that your partner uses violent, obscene, or otherwise unacceptable language, please press the button below the chat window to report their behavior and end the chat.
                 Then, we will ask you and your partner to return the study to receive prorated compensation for your time.

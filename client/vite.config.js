@@ -36,6 +36,7 @@ export default defineConfig({
       allow: [
         // search up for workspace root
         searchForWorkspaceRoot(process.cwd()),
+        '/opt/emp'
       ],
     },
     hmr: {
@@ -45,7 +46,10 @@ export default defineConfig({
     }
   },
   build: {
-    minify: false
+    minify: false,
+    rollupOptions: {
+      external: ['@empirica/core']
+    }
   },
   clearScreen: false,
   plugins: [

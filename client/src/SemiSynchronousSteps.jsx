@@ -12,6 +12,7 @@ import Conversation from './sync/Conversation.jsx';
 export default function SemiSynchronousSteps() {
 
     const player = usePlayer();
+    console.log('semi-sync');
 
     const chatEnded = (player.get('serverChatEnded') || player.get('processEarlyFinish')) || false;
     const acknowledgedChatEnd = player.get('passedChat') || false;

@@ -39,8 +39,8 @@ export default function Tutorial({ next }) {
     }
 
     const q2Answers = [
-        [1, "Complete a survey of your opinions toward various topics"],
-        [2, "Discussion with a partner and writing a report about their opinions"],
+        [1, "Completing a survey of your opinions toward various topics"],
+        [2, "Discussion with a partner, then describing their beliefs"],
         [3, "None of these options"]
     ];
     const q3Answers = [
@@ -116,13 +116,13 @@ export default function Tutorial({ next }) {
 
     }
     function handleWhy() {
-        setLowBonusExplanation(<div>
+        setLowBonusExplanation(<>
             <br/>
             <p>Remember, your default bonus is {formatMoney(gameParams.bonus)}.
             If you share {formatMoney(gameParams.maxBonusShare)} and your partner shares {formatMoney(0)}, your final bonus will decrease to {formatMoney(gameParams.bonus-gameParams.maxBonusShare)}.</p>
             <br/>
             <p>Choosing to share is a risk.</p>
-        </div>);
+        </>);
     }
 
     function handleNext() {
@@ -184,37 +184,48 @@ export default function Tutorial({ next }) {
                     </Stack>;
     if (step == 2) {
         tutorialStepUI = <Stack gap={1}>
+                            <img src='/images/tutorial_study_desc.svg' style={{marginBottom: '-8em'}}/>
                             <Typography level="h2" textAlign="center">
-                                Tutorial
+                                Study Description
+                            </Typography>
+
+                            <Typography level="h3" sx={{pt: 4}}>
+                                Goal
                             </Typography>
                             <Typography level="body-md">
+                                In this study, we are measuring the quality and diversity arguments made by people with various perspectives on contemporary political issues.
+                                By participating, you have the opportunity to contribute to a large-scale analysis comparing the arguments of people from your side with those across the spectrum.
+                                This is your chance to take a stand and reflect on what matters most to you and those around you.
+
+                            </Typography>
+                            <Typography level="h3" sx={{pt: 4}}>
+                                Steps
+                            </Typography>
+                            <Typography>
                                 This study has two parts. Within each part you will complete multiple short tasks.
                                 You have a fixed amount of time to complete each part.
-                                Please complete all tasks displayed at the top of the page within the alotted time.
+                                Please complete all tasks displayed at the top of the page within the allotted time.
                             </Typography>
-                            <Typography level="h3">Part 1) Individual Preparation</Typography>
+                            <Typography level="h4" sx={{pt: 2}}>1) Preparation</Typography>
                             <Typography level="body-md">
-                                Before we assign you a partner, you will complete a survey about your opinions on various topics.
-                                Then, you will enter a waiting room until all study participants finish the survey.
-                                The maximum time you will wait is displayed above.
+                                First, you will complete a survey about your opinions on various topics.
+                                Please indicate your level of interest in the topic by the strength of your responses.
+                                <br/><br/>
+                                Then, you will enter a waiting room until all study participants are ready to be assigned a discussion partner.
+                                The maximum time you will wait will be displayed on the page.
+                                In the event you are unable to be paired, you will be paid {formatMoney(gameParams.task1Pay)} for completing this part of the study.
                             </Typography>
-                            <Typography level="body-md">
-                            You will be paid {formatMoney(gameParams.task1Pay)} for completing this part of the study.
-                            </Typography>
-                            <Typography level="h3">Part 2) Paired Communication</Typography>
+                            <Typography level="h4" sx={{pt: 2}}>2) Discussion & Argumentation</Typography>
                             <Typography level="body-md">
                             This is the main focus of our study.
-                            You will be paired with another participant and will discuss your reactions to a recent news article that we will provide.
-                            Then, you will write a paragraph-long report <b>about your partner's</b> opinion on the conversation topic.
-                            </Typography>
-                            <Typography level="body-md">
+                            You will be paired with another participant to debate an assigned topic.
+                            Don't worry; there is no winning or losing. Research simply shows that interacting with others helps with self-reflection and forming better arguments (<a className="link" href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2021.631203/full" target="__blank">source</a>).
+                            <br/><br/>
+                            We will kick-start the discussion by providing a news article to respond to, before opening up the discussion to hear your general beliefs.
+                            Afterward, to aid in our analysis, you will describe your understanding of your partner's beliefs.
                             You will be paid an additional {formatMoney(gameParams.task2Pay)} for completing this part of the study.
                             </Typography>
-                            <Typography level="body-md">
-                            If we recruit an odd number of participants, we may not be able to
-                            partner you. If so, we will stop the study early and pay you for completing Part 1.
-                            </Typography>
-                            <FormControl>
+                            <FormControl sx={{pt: 4}}>
                                 <FormLabel>What does the main part of the study involve?</FormLabel>
                                 <RadioGroup name="q2" onChange={handleRadioButtonChange} defaultValue=''>
                                     {q2RadioButtons}
@@ -256,8 +267,6 @@ export default function Tutorial({ next }) {
                                 <FormLabel></FormLabel>
                                 <RadioGroup
                                     overlay
-                                    name="member"
-                                    defaultValue="person1"
                                     orientation="horizontal"
                                     sx={{ gap: 2 }}
                                 >
@@ -338,7 +347,7 @@ export default function Tutorial({ next }) {
                         Why?
                         </Button>
                         <Button variant="solid" size="sm" onClick={handleFinishTutorial}>
-                        I understand
+                        I understand, continue to the survey
                         </Button>
                     </Box>
                     </Box>
@@ -369,7 +378,6 @@ export default function Tutorial({ next }) {
             }} gap={1} >
                 {/* <img src="images/"/> */}
                 {tutorialStepUI}
-                {/* {nonconsentForm} */}
                 <Alert
                         startDecorator={<WarningIcon />}
                         variant="outlined"

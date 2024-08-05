@@ -6,7 +6,7 @@ cd "$parent_path"
 # Load dotenv
 export $(cat .env | xargs)
 
-empirica bundle
+emp bundle
 
 echo $SERVER_SSH;
 echo $SERVER_PATH;

@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@empirica/core": "1.9.3",
     "axios": "^1.6.0",
     "cross-fetch": "^4.0.0",
     "dotenv": "^16.3.1",

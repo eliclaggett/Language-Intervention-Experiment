@@ -287,7 +287,10 @@ async def handleInput(websocket):
         async for message in websocket:
             # Messages are received in JSON format, e.g., {command: "do_something", data: "data"}
             data = json.loads(message, object_hook=obj)
-            print(f'{name} received a command to "{data.command}" for {data.pairId}!', flush=True)
+            if hasattr(data, 'pairId'):
+                print(f'Received a command to "{data.command}" for {data.pairId}!', flush=True)
+            else:
+                print(f'Received a command to "{data.command}"!', flush=True)
 
             # Process "update_history" command
             if data.command == 'update_history':
@@ -335,7 +338,7 @@ async def handleInput(websocket):
                     await websocket.send(json.dumps({'partial_reply': output, 'idx': idx}))
 
                 await websocket.send(json.dumps({'partial_reply': '[EOS]', 'idx': idx}))
-                queue.task_done()
+                
                 if (pairId in pair_metadata):
                     pair_metadata[pairId]['idx'] += 1
             elif data.command == 'rewrite':
@@ -363,7 +366,7 @@ async def handleInput(websocket):
 
     # Process when the client disconnects            
     except websockets.exceptions.ConnectionClosedError:    
-        print('Connection closed')
+        print('Connection closed', flush=True)
     finally:
         connected.remove(websocket)
 
@@ -375,13 +378,13 @@ async def main():
         ssl_context.load_cert_chain(f'/etc/letsencrypt/live/{SERVER_URL}/fullchain.pem', keyfile=f'/etc/letsencrypt/live/{SERVER_URL}/privkey.pem')
         
         async with serve(handleInput, "", NLP_PORT, ssl=ssl_context):
-            print('Running secure websocket server on port {}...'.format(NLP_PORT))
+            print('Running secure websocket server on port {}...'.format(NLP_PORT), flush=True)
             await asyncio.Future()  # run forever
     
     # During local development, we use an unencrypted connection
     else:
         async with serve(handleInput, "", NLP_PORT):
-            print('Running websocket server on port {}...'.format(NLP_PORT))
+            print('Running websocket server on port {}...'.format(NLP_PORT), flush=True)
             await asyncio.Future()  # run forever
 
 # Run websocket server until we receive a keyboard interrupt

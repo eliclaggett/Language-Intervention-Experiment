@@ -55,13 +55,13 @@ export default function Recaptcha({ next }) {
             }} gap={1} >
                 <img src="images/undraw_chatting_re_j55r.svg" id="headerImg_recaptcha" />
                 <Typography level="h1">
-                    Welcome to the CMU<br />Conversations Study
+                    Welcome to the<br/>CMU Communication Study
                 </Typography>
                 <Typography level="body-sm">
                     Version: {gameParams?.version ? gameParams.version : ''}
                 </Typography>
                 <Typography level="body-md">
-                    Ready to chat? Complete the CAPTCHA to start the first task.
+                    Complete the CAPTCHA below to get started.
                 </Typography>
                 <ReCAPTCHA
                     sitekey={reCaptchaSiteKey}

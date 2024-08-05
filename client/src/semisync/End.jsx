@@ -50,54 +50,45 @@ export default function End({next}) {
 
     let totalPay = gameParams.task1Pay;
     const minPayment = gameParams.task1Pay + gameParams.task2Pay;
-
-
+    let bonusPayUI = '';
     const startedTask2 = player.get('startTask2') || false;
+    const cooperationDecision = player.get('submitCooperationDecision') || 0;
+    const partnerCooperationDecision = player.get('partnerCooperationDecision') || false;
+    const partnerCooperationType = player.get('partnerCooperationType');
     let task2PayUI = '';
+
     if (startedTask2) {
         task2PayUI = <tr>
             <td>Task 2 Pay</td>
             <td>{formatMoney(gameParams.task2Pay)}</td>
         </tr>;
+
         totalPay += gameParams.task2Pay;
-    }
-    let bonusPayUI = '';
-    const cooperationDecision = player.get('submitCooperationDecision') || 0;
-    const partnerCooperationDecision = player.get('partnerCooperationDecision');
-    const partnerCooperationType = player.get('partnerCooperationType');
 
+        if (partnerCooperationDecision != false) {
 
-    if (partnerCooperationDecision != -1) {
-
-        let bonus = gameParams.bonus - cooperationDecision;
-        if (partnerCooperationType == 'Share') {
-            bonus += (partnerCooperationDecision * 2);
+            let bonus = gameParams.bonus - cooperationDecision;
+            if (partnerCooperationType == 'Share') {
+                bonus += (partnerCooperationDecision * 2);
+            }
+    
+            bonus = Math.max(bonus, 0);
+    
+            bonusPayUI = <tr>
+                 <td>Bonus Payment</td>
+                 <td>{formatMoney(bonus)}</td>
+             </tr>;
+            totalPay += bonus;
+        } else {
+            // Partner never selected a bonus option :O
+            let bonus = gameParams.bonus - cooperationDecision;
+    
+            bonusPayUI = <tr>
+                 <td>Bonus Payment</td>
+                 <td>{formatMoney(bonus)}</td>
+             </tr>;
+            totalPay += bonus;
         }
-
-        bonus = Math.max(bonus, 0);
-
-        bonusPayUI = <tr>
-             <td>Bonus Payment</td>
-             <td>{formatMoney(bonus)}</td>
-         </tr>;
-        totalPay += bonus;
-    } else if (startedTask2) {
-        // Partner never selected a bonus option :O
-        let bonus = gameParams.bonus - cooperationDecision;
-
-        bonusPayUI = <tr>
-             <td>Bonus Payment</td>
-             <td>{formatMoney(bonus)}</td>
-         </tr>;
-        totalPay += bonus;
-    }
-
-    function handleRadioButtonChange(evt) {
-        setCurrentValue(evt.target.value);
-        setRadioButtonVals(radioButtonVals => ({
-            ...radioButtonVals,
-            [evt.target.name]: evt.target.value
-        }));
     }
 
     function handleButtonClick(evt) {
@@ -106,13 +97,14 @@ export default function End({next}) {
         setFeedbackTxt('Feedback received! Thank you so much!');
     }
 
-
     let paymentUI = '';
     let myContributionText = '';
     let partnerContributionText = '';
+
     if (cooperationDecision > 0) {
         myContributionText = <ListItem>Subtract {formatMoney(cooperationDecision)} to share with your partner</ListItem>
     }
+    
     if (partnerCooperationDecision > 0) {
         partnerContributionText = <ListItem>Add {formatMoney(partnerCooperationDecision * 2)} for the amount your partner shared</ListItem>;
     }
@@ -211,7 +203,8 @@ export default function End({next}) {
         </Typography>
     </div>;
     } else {
-        if (stageTimer && stageTimer.remaining && partnerCooperationDecision == -1) {
+        console.log(partnerCooperationDecision);
+        if (stageTimer && stageTimer.remaining && (partnerCooperationDecision === false)) {
             paymentUI = <div>
                 <Typography level="body-md">
                     Your partner has not finished allocating their bonus so we cannot calculate your final payment yet. However, you are guaranteed to earn at least {formatMoney(minPayment)} for your participation.

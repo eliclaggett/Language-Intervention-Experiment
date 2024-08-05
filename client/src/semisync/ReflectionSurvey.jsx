@@ -76,6 +76,8 @@ export default function ReflectionSurvey({ next }) {
     const [conversationDifficultyValue, setConversationDifficultyValue] = useState(null);
     const [aiIOS, setAIIOS] = useState(null);
     const [partnerIOS, setPartnerIOS] = useState(null);
+    const [argumentStrengthValue, setArgumentStrengthValue] = useState(null);
+    const [partnerArgumentStrengthValue, setPartnerArgumentStrengthValue] = useState(null);
     // const [isDisabled, setIsDisabled] = useState(true);
 
     const isDisabled = (step == 1 && (!partnerOpinion || !feelingThermometer || !conversationDifficultyValue || !opinionChangeValue)) ||
@@ -166,6 +168,8 @@ export default function ReflectionSurvey({ next }) {
                 suggestionReaction: suggestionReaction,
                 difficulty: conversationDifficultyValue,
                 opinionSurvey: opinionChangeValue,
+                argumentStrength: argumentStrengthValue,
+                partnerArgumentStrength: partnerArgumentStrengthValue,
                 partnerIOS: partnerIOS,
                 aiIOS: aiIOS
             });
@@ -198,11 +202,25 @@ export default function ReflectionSurvey({ next }) {
     function handleDifficultyChange(e) {
         setConversationDifficultyValue(e.target.value);
     }
+    function handleArgumentStrengthChange(e) {
+        setArgumentStrengthValue(e.target.value);
+    }
+    function handlePartnerArgumentStrengthChange(e) {
+        setPartnerArgumentStrengthValue(e.target.value);
+    }
     function handlePartnerIOSChange(e) {
         setPartnerIOS(e.target.value);
     }
     function handleAIIOSChange(e) {
         setAIIOS(e.target.value);
+    }
+
+    let aiIOSUI = '';
+    if (gameParams.treatmentType != 'none') {
+        aiIOSUI = <>
+            <Typography level="h3" sx={{pt: 2}}>Select the picture below which best describes your relationship with the <span style={{color:'rgb(102, 93, 245)'}}>AI suggestions</span>.</Typography>
+            <IOSQuestion onChange={handleAIIOSChange} value={aiIOS} type='ai'/>
+        </>;
     }
 
     let stepUI = <>
@@ -246,6 +264,14 @@ export default function ReflectionSurvey({ next }) {
             <LikertQuestion name='conversationDifficulty' prompt='' onChange={handleDifficultyChange} value={conversationDifficultyValue} type="difficulty"/>
             {/* <FormHelperText>This is a helper text.</FormHelperText> */}
         </FormControl>
+        <FormControl className="small">
+            <FormLabel>How would you rate your argumentation skills?</FormLabel>
+            <LikertQuestion name='conversationDifficulty' prompt='' onChange={handleArgumentStrengthChange} value={argumentStrengthValue} type="strength"/>
+        </FormControl>
+        <FormControl className="small">
+            <FormLabel>How would you rate your partner's argumentation skills?</FormLabel>
+            <LikertQuestion name='conversationDifficulty' prompt='' onChange={handlePartnerArgumentStrengthChange} value={partnerArgumentStrengthValue} type="strength"/>
+        </FormControl>
     </Stack>
     <Stack
     sx={{
@@ -258,7 +284,7 @@ export default function ReflectionSurvey({ next }) {
         mx: 'auto'
         }} className="rightLog">
     <Typography level='h2' sx={{mb: 1}}>Chat Log</Typography>
-    <MainContainer style={{ maxHeight: '50rem' }}>
+    <MainContainer style={{ maxHeight: '80rem' }}>
         <ChatContainer style={{height: '100%'}}>       
             <MessageList>
                 {chatLog}
@@ -287,8 +313,7 @@ export default function ReflectionSurvey({ next }) {
         </div>
         <Typography level="h3" sx={{pt: 2}}>Select the picture below which best describes your relationship with your <span style={{color:'rgb(102, 93, 245)'}}>partner</span>.</Typography>
         <IOSQuestion onChange={handlePartnerIOSChange} value={partnerIOS} type='partner'/>
-        <Typography level="h3" sx={{pt: 2}}>Select the picture below which best describes your relationship with the <span style={{color:'rgb(102, 93, 245)'}}>AI</span>.</Typography>
-        <IOSQuestion onChange={handleAIIOSChange} value={aiIOS} type='ai'/>
+        {aiIOSUI}
         
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', flexDirection: 'row' }}>
             <Button sx={{ my: 2 }} onClick={handleButtonClick} disabled={isDisabled}>Continue</Button>

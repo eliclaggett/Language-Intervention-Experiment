@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CssVarsProvider, useColorScheme } from '@mui/joy/styles';
 import GlobalStyles from '@mui/joy/GlobalStyles';
 import CssBaseline from '@mui/joy/CssBaseline';
@@ -35,8 +35,7 @@ export default function Game() {
   const stageTimer = useStageTimer();
   const player = usePlayer();
 
-  // let uiStep = null;
-
+  console.log('game');
   if (player.get('end')) {
     return <End/>;
   }

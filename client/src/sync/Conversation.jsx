@@ -14,7 +14,6 @@ import { wsSend } from '../utils/utils.js';
 
 import '../chat.scss';
 import { Avatar, MainContainer, ChatContainer, MessageList, Message, MessageInput, TypingIndicator } from '@chatscope/chat-ui-kit-react';
-import { State } from '@empirica/tajriba';
 
 import WithinGroupGraphic from '../components/WithinGroupGraphic.jsx';
 import AcrossGroupGraphic from '../components/AcrossGroupGraphic.jsx';
@@ -34,6 +33,7 @@ import {
 } from 'obscenity';
 
 export default function Conversation({next}) {
+    console.log('in conversation')
 
     // const timerMixin = TimerMixin();
     const player = usePlayer();
@@ -163,6 +163,7 @@ export default function Conversation({next}) {
                 window.suggestion = currentSuggestion;
             } else {
 
+                currentSuggestion = currentSuggestion.trim();
                 // Remove 'You: '
                 if (currentSuggestion.slice(0, 4).toLowerCase() == 'you:') {
                     currentSuggestion = currentSuggestion.slice(currentSuggestion.indexOf(':')+1).trim();
@@ -364,7 +365,7 @@ export default function Conversation({next}) {
                         pairId: player.id,
                         incomplete_msg: valueRef.current
                     }));
-                }, 5000);
+                }, 2000);
             }
         } else {
             window.suggestion = '';
@@ -629,7 +630,7 @@ export default function Conversation({next}) {
             </div>
             <IconButton variant="plain" onClick={handleSendSuggestion}>
                 <SendRounded />
-            </IconButton>;
+            </IconButton>
         </div>;
     } else if (gameParams.treatmentType == 'rewrite' && !editingMsg && rngPerMessage <= gameParams.suggestionProbability) {
         rewriteUI = <div className={suggestionClass}>

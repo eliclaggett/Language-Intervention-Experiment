@@ -7,8 +7,15 @@
  */
 import { EmpiricaClassic } from "@empirica/core/player/classic";
 import { EmpiricaContext } from "@empirica/core/player/classic/react";
+import { usePlayer, useGame } from "@empirica/core/player/classic/react";
 import { EmpiricaMenu, EmpiricaParticipant } from "@empirica/core/player/react";
-import React, { useEffect } from "react";
+import {
+  usePlayers,
+  useRound,
+  useStage,
+  useStageTimer
+} from "@empirica/core/player/classic/react";
+import React, { useEffect, useState } from "react";
 import Recaptcha from './async/Recaptcha.jsx';
 import ConsentForm from './async/ConsentForm.jsx';
 import Tutorial from './async/Tutorial.jsx';
@@ -25,6 +32,8 @@ import TimerMixin from 'react-timer-mixin';
 import ChatEndAcknowledgement from "./semisync/ChatEndAcknowledgement.jsx";
 import TaskInstructions from "./components/TaskInstructions.jsx";
 import ReflectionSurvey from "./semisync/ReflectionSurvey.jsx";
+import PartnerAnswer from "./semisync/PartnerAnswer.jsx";
+import { Container, Stack, Typography } from "@mui/joy";
 
 // Custom theme
 const theme = extendTheme({
@@ -52,12 +61,20 @@ const theme = extendTheme({
   },
   typography: {
     'h3': {
-      fontSize: '1.15rem'
+      fontSize: '1.5rem'
+    },
+    'h4': {
+      fontSize: '1rem'
     }
   }
 });
 
 export default function App() {
+
+
+  console.log('app');
+
+  const [connectedToNLP, setConnectedToNLP] = useState(true);
 
   const urlParams = new URLSearchParams(window.location.search);
   const playerKey = urlParams.get("participantKey") || "";
@@ -70,6 +87,28 @@ export default function App() {
     const port = href.match(regEx)[1];
     url = `${protocol}//${host}/${port}/query`;
   }
+  function onboardingSteps({ game, player }) {
+    return [
+      // [Warning] Test only
+      // ReflectionSurvey,
+      // OpinionSurvey,
+
+      // Real onboarding steps
+      // Recaptcha,
+      // ConsentForm,
+      // Tutorial,
+      // PreEvaluation, // No pre-evaluation
+      OpinionSurvey,
+    ];
+  }
+  
+  function exitSteps({ game, player }) {
+    return [End, Problem];
+  }
+
+  const [studyUI, setStudyUI] = useState(<EmpiricaContext playerCreate={PlayerCreate} introSteps={onboardingSteps} lobby={Lobby} exitSteps={exitSteps}> 
+    <Game/>
+  </EmpiricaContext>);
 
   const connectToNLP = () => {
 
@@ -78,7 +117,6 @@ export default function App() {
 
     // The server uses an encrypted connection when not being tested locally
     let nlpServerURL = (window.location.protocol === 'http:') ?
-      // 'ws://' + window.location.hostname + ':' + '9910':
       'wss://slabbrdbrd.dev/9910' :
       'wss://' + window.location.hostname + '/' + '9910';
 
@@ -89,8 +127,9 @@ export default function App() {
     // Connect to server
     window.nlpServer.onopen = () => {
       console.log('Connection successfully established with Python server');
+      setConnectedToNLP(true);
       
-      // Occassionally ping the server to prevent the connection from closing
+      // Occasionally ping the server to prevent the connection from closing
       window.nlpInterval = setInterval(() => {
         if (window.nlpServer instanceof WebSocket) {
           wsSend('{"command": "ping"}');
@@ -102,13 +141,35 @@ export default function App() {
   
     // Automatically reconnect if the connection is lost
     window.nlpServer.onclose = () => {
+      // TODO: PROD Uncomment
       TimerMixin.setTimeout(() => {
         connectToNLP();
       }, 1000);
-    };
+    };    
 
     window.nlpServer.onerror = (ev) => {
       console.log('Failed to connect to Python server');
+      setStudyUI(<Container sx={{
+          width: '100vw',
+          height: '100vh'
+        }}>
+              <Stack sx={{
+                        maxWidth: {
+                            md: '80rem'
+                        },
+                        mx: 'auto',
+                        pb: '20vh',
+                        textAlign: 'center',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                    }} gap={1} >
+                      <Typography level='title-lg' fontSize='3em'>Oops...</Typography>
+                      <Typography level='body-md' fontSize='1.5em'>The server is experiencing technical difficulties.<br/>Please return the study and contact us through Prolific.</Typography>
+              </Stack>
+        </Container>);
+      
+      // TODO: PROD Uncomment
       TimerMixin.setTimeout(() => {
         connectToNLP();
       }, 1000);
@@ -120,25 +181,6 @@ export default function App() {
     connectToNLP();
   }, []);
 
-  function onboardingSteps({ game, player }) {
-    return [
-      // [Warning] Test only
-      // Tutorial,
-      // OpinionSurvey,
-
-      // Real onboarding steps
-      Recaptcha,
-      ConsentForm,
-      Tutorial,
-      // PreEvaluation, // No pre-evaluation
-      OpinionSurvey,
-    ];
-  }
-  
-  function exitSteps({ game, player }) {
-    return [End, Problem];
-  }
-  
   // UI
   return (
     <EmpiricaParticipant url={url} ns={playerKey} modeFunc={EmpiricaClassic}>
@@ -148,9 +190,7 @@ export default function App() {
 
     <CssVarsProvider theme={theme} defaultMode="light" modeStorageKey="joy-mode-scheme-light" disableTransitionOnChange>
     <CssBaseline />
-    <EmpiricaContext playerCreate={PlayerCreate} introSteps={onboardingSteps} lobby={Lobby} exitSteps={exitSteps}> 
-      <Game />
-    </EmpiricaContext>
+      {studyUI}
     </CssVarsProvider>
     </div>
     </div>

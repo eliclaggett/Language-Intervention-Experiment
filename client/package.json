@@ -3,7 +3,6 @@
     "@chatscope/chat-ui-kit-react": "^1.10.1",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
-    "@empirica/core": "1.9.3",
     "@livekit/components-react": "^2.3.1",
     "@mui/icons-material": "^5.14.16",
     "@mui/joy": "^5.0.0-beta.14",
@@ -36,7 +35,7 @@
     "path": "0.12.7",
     "sass": "^1.69.5",
     "unocss": "^0.58.5",
-    "vite": "^5.1.4",
+    "vite": "^5.3.5",
     "vite-plugin-node-polyfills": "^0.21.0",
     "vite-plugin-restart": "^0.4.0"
   },
