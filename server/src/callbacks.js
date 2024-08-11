@@ -43,7 +43,7 @@ const gameParams = {
   
   // Experiment parameters
   treatmentType: 'suggestion', // suggestion, none (previously completion, suggestion, rewrite, none)
-  treatmentAlgorithm: 'relational', // relational, personal
+  treatmentAlgorithm: 'personal', // relational, personal
   suggestionProbability: 1,
 
   // Configuration

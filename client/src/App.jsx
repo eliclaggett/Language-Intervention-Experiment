@@ -94,9 +94,9 @@ export default function App() {
       // OpinionSurvey,
 
       // Real onboarding steps
-      // Recaptcha,
-      // ConsentForm,
-      // Tutorial,
+      Recaptcha,
+      ConsentForm,
+      Tutorial,
       // PreEvaluation, // No pre-evaluation
       OpinionSurvey,
     ];

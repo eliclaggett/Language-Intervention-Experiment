@@ -11,6 +11,7 @@ ssh -i deployment/server.pem $SERVER_SSH bash << HERE
  then
  kill -2 \`cat ./RUNNING_PID\`
  rm nohup.out
+ rm ./RUNNING_PID
  echo "Successfully stopped the experiment!";
  else
  echo "No experiment running!";

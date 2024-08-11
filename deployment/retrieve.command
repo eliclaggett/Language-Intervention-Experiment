@@ -7,7 +7,7 @@ export $(cat .env | xargs)
 
 
 dt=$(date +%F)
-echo "Saving experiment to ${DATA_PATH}/tajriba-${dt}.json"
+echo "Saving experiment to ${DATA_PATH}"
 
 sftp -b - -i deployment/server.pem $SERVER_SSH <<EOF
 	get -r ${PROD_STORE_PATH}/* ${DATA_PATH}/

@@ -9,6 +9,26 @@ import React from "react";
 import { FormControl, FormLabel, Typography, RadioGroup } from '@mui/joy';
 import ImageRadioButton from "./ImageRadioButton.jsx";
 
+import IOS1Partner from '../images/IOS 1 Partner.svg';
+import IOS2Partner from '../images/IOS 2 Partner.svg';
+import IOS3Partner from '../images/IOS 3 Partner.svg';
+import IOS4Partner from '../images/IOS 4 Partner.svg';
+import IOS5Partner from '../images/IOS 5 Partner.svg';
+import IOS6Partner from '../images/IOS 6 Partner.svg';
+import IOS7Partner from '../images/IOS 7 Partner.svg';
+
+import IOS1AI from '../images/IOS 1 AI.svg';
+import IOS2AI from '../images/IOS 2 AI.svg';
+import IOS3AI from '../images/IOS 3 AI.svg';
+import IOS4AI from '../images/IOS 4 AI.svg';
+import IOS5AI from '../images/IOS 5 AI.svg';
+import IOS6AI from '../images/IOS 6 AI.svg';
+import IOS7AI from '../images/IOS 7 AI.svg';
+
+
+
+
+
 export default function IOSQuestion({
     onChange = null,
     value=null,
