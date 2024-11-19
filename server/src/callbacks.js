@@ -1,49 +1,63 @@
-import { Batch, ClassicListenersCollector, Game, Player } from "@empirica/core/admin/classic";
-import * as fs from 'fs';
-import axios from 'axios';
-import dotenv from 'dotenv';
+/*
+ * Filename: callbacks.js
+ * Author: Elijah Claggett
+ *
+ * Description:
+ * This JavaScript file serves as the backend for the Empirica experiment, responding to callbacks triggered by the client.
+ */
+
+// Imports
+import {
+  Batch,
+  ClassicListenersCollector,
+  Game,
+  Player,
+} from "@empirica/core/admin/classic";
+import * as fs from "fs";
+import axios from "axios";
+import dotenv from "dotenv";
 import findConfig from "find-config";
 export const Empirica = new ClassicListenersCollector();
 import { makePairs } from "./pairing";
 
+// Load .env variables from either the server or local environment
 let dotEnvPath = null;
-if (fs.existsSync('/home/ubuntu/eli')) {
-  dotEnvPath = findConfig('.env', {cwd: '/home/ubuntu/eli/experiment'});
-} else if (fs.existsSync('/Users/eclagget/Code/experiment')) {
-  dotEnvPath = findConfig('.env', {cwd: '/Users/eclagget/Code/experiment/chat-cooperation'});
+if (fs.existsSync("/home/ubuntu/eli")) {
+  dotEnvPath = findConfig(".env", { cwd: "/home/ubuntu/eli/experiment" });
+} else if (fs.existsSync("/Users/eclagget/Code/experiment")) {
+  dotEnvPath = findConfig(".env", {
+    cwd: "/Users/eclagget/Code/experiment/chat-cooperation",
+  });
 }
 
 if (dotEnvPath) {
-  console.log('Loading dotenv file!');
+  console.log("Loading dotenv file!");
   const envFile = dotenv.parse(fs.readFileSync(dotEnvPath));
   for (const key of Object.keys(envFile)) {
     process.env[key] = envFile[key];
   }
 } else {
-  console.log('Warning: No dotenv file!');
+  console.log("Warning: No dotenv file!");
 }
 
+// Initialize global variables
 const completionCodes = {
-  task1: 'C1CUDUAH',
-  task2: 'C1JF7BDA',
-  // defection: 'defect',
-  // cooperation: 'cooperate',
-  // mutualCooperation: 'mutual_cooperate'
+  task1: "C1CUDUAH",
+  task2: "C1JF7BDA",
 };
 
 const gameParams = {
-  version: 'June 2024',
-  
+  version: "August 2024",
+  test: false,
+
   // Payouts
   task1Pay: 3,
   task2Pay: 3,
   bonus: 3,
   maxBonusShare: 2, // Used in consent form, tutorial, and economic game to calculate bonus range
   shareMultiplier: 1.5,
-  
+
   // Experiment parameters
-  treatmentType: 'suggestion', // suggestion, none (previously completion, suggestion, rewrite, none)
-  treatmentAlgorithm: 'personal', // relational, personal
   suggestionProbability: 1,
 
   // Configuration
@@ -59,94 +73,136 @@ const gameParams = {
   partnerAnswerTime: 2,
 
   // Misc. global variables
-  samplingType: 'within' // within, between (passed pre-eval or not)
+  samplingType: "within", // within, between (passed pre-eval or not)
 };
 
-const botTexts = JSON.parse(fs.readFileSync(process.env['EXPERIMENT_DIR'] + '/' + process.env['EXPERIMENT_NAME'] + '/texts.json'))
-botTexts['preEvalMessages'] = botTexts['messagesEvaluation'][2]
+const botTexts = JSON.parse(
+  fs.readFileSync(
+    process.env["EXPERIMENT_DIR"] +
+      "/" +
+      process.env["EXPERIMENT_NAME"] +
+      "/texts.json"
+  )
+);
+botTexts["preEvalMessages"] = botTexts["messagesEvaluation"][2];
 
-const submittedOpinionSurvey = new Set();
-const preEvalTimers = {};
-const playerStatus = {};
-const chatChannelTopics = {};
 let gamePairs = {};
-let currentGame = null;
+const playerStatus = {};
+const preEvalTimers = {};
+const chatChannelTopics = {};
+const playerChatChannels = {};
+const playerTypingChannels = {};
+const submittedOpinionSurvey = new Set();
 
-Empirica.on("game", (ctx, { game }) => {
-  // game init after at least one player joins the lobby
-  console.log('main task init');
-  game.set('gameParams', gameParams);
-  game.set('lobbyDuration', game.lobbyConfig.duration);
-  game.set('submitCooperationDecision', false);
-  game.set('currentStage', 'onboarding');
-  currentGame = game;
+// Called when the "game" (experiment) starts, aka, when at least one participant joins the lobby
+Empirica.on("game", (_, { game }) => {
+  // Initialize parameters
+  game.set("gameParams", gameParams);
+  game.set("lobbyDuration", game.lobbyConfig.duration);
+  game.set("submitCooperationDecision", false);
+  game.set("currentStage", "onboarding");
 });
 
+// Called when a participant joins the experiment
+Empirica.on("player", (ctx, { player, _ }) => {
+  // Initialize the participant unless already initialized
+  if (player.get("gameParams")) return;
+  player.set("gameParams", gameParams);
+
+  playerStatus[player.id] = {
+    cooperationDecision: -1,
+    cooperationType: "Share",
+    submitReflectionSurvey: false,
+  };
+});
+
+// Helper function to schedule messages from the chatbot during the chat step of the experiment
 function startChatbotPrompting(game) {
+  // Update current experiment stage
+  game.set("currentStage", "mainDiscussion");
+
+  // Send initial messages
   let currentMinute = 0;
-  game.set('currentStage', 'mainDiscussion');
   for (const k of Object.keys(chatChannelTopics)) {
     const topic = parseInt(chatChannelTopics[k].substring(1)) - 1;
 
     const msgs = [];
     msgs.push({
       sender: -1,
-      sentTime: 'just now',
-      txt: botTexts['welcomeMessage']
+      sentTime: "just now",
+      txt: botTexts["welcomeMessage"],
     });
 
     msgs.push({
       sender: -1,
-      sentTime: 'just now',
-      txt: botTexts['customExamples'][topic]
+      sentTime: "just now",
+      txt: botTexts["customExamples"][topic],
     });
 
     game.set(k, msgs);
   }
 
+  // Schedule latter messages
   const promptInterval = setInterval(() => {
-    let nextPrompt = '';
+    let nextPrompt = "";
 
     for (const k of Object.keys(chatChannelTopics)) {
       const topic = parseInt(chatChannelTopics[k].substring(1)) - 1;
-      const p1Id = k.split('-')[1];
-      const p2Id = k.split('-')[2];
+      const p1Id = k.split("-")[1];
+      const p2Id = k.split("-")[2];
 
       const p1 = game.players.filter((p) => p.id == p1Id)[0];
       const p2 = game.players.filter((p) => p.id == p2Id)[0];
 
-      if (currentMinute == gameParams['followupDelay1']) {
-        nextPrompt = botTexts['customPrompts'][topic];
-      } else if (currentMinute == gameParams['followupDelay1']+gameParams['followupDelay2']) {
-        nextPrompt = botTexts['customFollowups'][topic];
-      }
-      else if (currentMinute == gameParams.chatTime-1 && gameParams.cooperationDiscussionTime > 0 && !(p1.get('requestEarlyFinish') || p2.get('requestEarlyFinish')) ) {
-      
-        const cooperationDiscussionPrompts = ['Time\'s up! Thank you for discussing your opinions.',
-        'Finally, you have a few minutes to discuss how to allocate your bonus.',
-        'If you share your bonus with each other, you will both receive 2x the amount you share.',
-        "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus."];
-        const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map((el) => { return {
-          sender: -1,
-          sentTime: 'just now',
-          txt: el
-        }});
+      // Send messages every couple of minutes unless either the participant or their partner requests an early finish
+      // If an early finish is requested, we break out of the schedule
+      if (currentMinute == gameParams["followupDelay1"]) {
+        nextPrompt = botTexts["customPrompts"][topic];
+      } else if (
+        currentMinute ==
+        gameParams["followupDelay1"] + gameParams["followupDelay2"]
+      ) {
+        nextPrompt = botTexts["customFollowups"][topic];
+      } else if (
+        currentMinute == gameParams.chatTime - 1 &&
+        gameParams.cooperationDiscussionTime > 0 &&
+        !(p1.get("requestEarlyFinish") || p2.get("requestEarlyFinish"))
+      ) {
+        const cooperationDiscussionPrompts = [
+          "Time's up! Thank you for discussing your opinions.",
+          "Finally, you have a few minutes to discuss how to allocate your bonus.",
+          "If you share your bonus with each other, you will both receive 2x the amount you share.",
+          "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus.",
+        ];
+        const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map(
+          (el) => {
+            return {
+              sender: -1,
+              sentTime: "just now",
+              txt: el,
+            };
+          }
+        );
         const msgs = game.get(k) || [];
         game.set(k, [...msgs, ...cooperationDiscussionMsgs]);
-        game.set('currentStage', 'cooperationDiscussion');
+        game.set("currentStage", "cooperationDiscussion");
       }
 
       if (nextPrompt.length > 0) {
         const msgs = game.get(k) || [];
 
-        game.set(k, [...msgs, {
-          sender: -1,
-          sentTime: 'just now',
-          txt: nextPrompt
-        }]);
+        game.set(k, [
+          ...msgs,
+          {
+            sender: -1,
+            sentTime: "just now",
+            txt: nextPrompt,
+          },
+        ]);
       }
     }
 
+    // Must run Empirica.flush() for asynchronous updates to be processed
     Empirica.flush();
     currentMinute++;
 
@@ -156,389 +212,337 @@ function startChatbotPrompting(game) {
   }, 60 * 1000); // Once per minute
 }
 
-let ps = {};
-const playerChatChannels = {};
-const playerTypingChannels = {};
-
+// Function that runs when the lobby timer runs out
 Empirica.onGameStart(({ game }) => {
-  console.log('making pairs');
-  // Setup the main task
-  // Must add a round to be able to use stages?
+  console.log("Making pairs");
+
+  // Initialize a basic "game round" (just how Empirica works)
   const round = game.addRound({
     name: "Round",
   });
 
-  // round.addStage({ name: "conversation", duration:
-  //   (gameParams.chatTime + gameParams.cooperationDiscussionTime) * 60 
-  // });
-  // round.addStage({ name: "cooperation", duration: gameParams.cooperationTime * 60 });
+  // Add a timed stage to the "game round"
   round.addStage({
-    name: "semi_asynchronous_steps", duration:
-      (
-      gameParams.chatTime +
-      gameParams.cooperationDiscussionTime +
-      gameParams.cooperationTime +
-      gameParams.reflectionSurveyTime +
-      gameParams.partnerAnswerTime
-      ) * 60
+    name: "semi_asynchronous_steps",
+    duration:
+      (gameParams.chatTime +
+        gameParams.cooperationDiscussionTime +
+        gameParams.cooperationTime +
+        gameParams.reflectionSurveyTime +
+        gameParams.partnerAnswerTime) *
+      60,
   });
 
-  // Pair all participants
+  // Get participants who passed all preceding steps
   const players = game.players.filter((p) => submittedOpinionSurvey.has(p.id));
-  ps = players;
-  const playerIds = [];
-  // const playerOpinionSurveyResponses = {};
-  // const pairs = [];
 
-
-  const [pairs, topics, groups] = makePairs(players, gameParams['samplingType']);
+  // Assign all participants a partner
+  const [pairs, topics, groups] = makePairs(players);
 
   gamePairs = pairs;
   gameGroups = groups;
 
   for (const player of game.players) {
+    if (typeof pairs[player.id] == "undefined" || pairs[player.id] == -1) {
+      // Could not make a pair for this participant
+      console.log("could not pair player", player.get("participantIdentifier"));
 
-    if (typeof(pairs[player.id]) == 'undefined' || pairs[player.id] == -1) {
-      // Could not pair player
-      console.log('could not pair player', player.get('participantIdentifier'));
-      player.set('end', true);
-      player.set('endReason', 'noPair');
-      // player.exit('noPair');
+      // Send the participant to the payment screen
+      player.set("end", true);
+      player.set("endReason", "noPair");
+
       continue;
     }
 
+    // Create a unique channel for each pair to track their chat messages and typing status
     const partner = players.filter((p) => p.id == pairs[player.id])[0];
 
-    let chatChannel = 'c-' + player.id + '-' + partner.id;
-    let typingChannel = 't-' + player.id + '-' + partner.id;
+    let chatChannel = "c-" + player.id + "-" + partner.id;
+    let typingChannel = "t-" + player.id + "-" + partner.id;
     if (Object.keys(playerChatChannels).includes(partner.id)) {
-      chatChannel =  playerChatChannels[partner.id];
-      typingChannel =  playerTypingChannels[partner.id];
+      chatChannel = playerChatChannels[partner.id];
+      typingChannel = playerTypingChannels[partner.id];
     }
-    
+
     playerChatChannels[player.id] = chatChannel;
     playerTypingChannels[player.id] = typingChannel;
 
-    player.set('chatChannel', chatChannel);
-    player.set('typingChannel', typingChannel);
-    player.set('partnerId', partner.id);
-    player.set('topic', topics[player.id]);
-    player.set('completionCode', completionCodes['task2']);
-    player.set('group', groups[player.id]);
-    player.set('partnerGroup', groups[partner.id]);
-    player.set('msgCount', 2);
+    // Update participants to reflect their newly assigned partner and chat topic
+    player.set("chatChannel", chatChannel);
+    player.set("typingChannel", typingChannel);
+    player.set("partnerId", partner.id);
+    player.set("topic", topics[player.id]);
+    player.set("completionCode", completionCodes["task2"]);
+    player.set("group", groups[player.id]);
+    player.set("partnerGroup", groups[partner.id]);
+    player.set("msgCount", 2);
 
-    partner.set('chatChannel', chatChannel);
+    partner.set("chatChannel", chatChannel);
     chatChannelTopics[chatChannel] = topics[player.id];
-    partner.set('typingChannel', typingChannel);
-    partner.set('partnerId', player.id);
-    partner.set('topic', topics[partner.id]);
-    partner.set('completionCode', completionCodes['task2']);
-    partner.set('group', groups[partner.id]);
-    partner.set('partnerGroup', groups[player.id]);
+    partner.set("typingChannel", typingChannel);
+    partner.set("partnerId", player.id);
+    partner.set("topic", topics[partner.id]);
+    partner.set("completionCode", completionCodes["task2"]);
+    partner.set("group", groups[partner.id]);
+    partner.set("partnerGroup", groups[player.id]);
 
-    player.set('startTask2', true);
-    player.set('msgUnderReview', '');
+    player.set("startTask2", true);
+    player.set("msgUnderReview", "");
   }
 
+  // Start the chat step of the experiment
   startChatbotPrompting(game);
 });
 
-Empirica.onRoundStart(({ round }) => { 
-  console.log('round started');
-});
-
-Empirica.onStageStart(({ stage }) => { 
-  console.log('stage started');
-});
-
-Empirica.onStageEnded(({ stage }) => {
-  console.log('stage ended');
-  // console.log(stage);
-  // for (const player of stage.currentGame.players) {
-    // player.set('serverChatEnded', true);
-    // console.log('Player:');
-    // console.log(player.id);
-  // }
-});
-
-Empirica.onRoundEnded(({ round }) => { });
-
-Empirica.onGameEnded(({ game }) => { 
-  
-  console.log('game ended');
-  
-});
-
+// ----------------------------------------------------------------
 // Custom callbacks
-
-// Called when a participant joins
-Empirica.on("player", (ctx, { player, _ }) => {
-  if (player.get('gameParams')) return;
-
-  player.set('gameParams', gameParams);
-  // player.set('isTyping', false);
-  // player.set('partner', -1);
-  // player.set('partnerFinished', false);
-  // player.set('passEval', true);
-  // player.set('preEvalStep', 0);
-  // player.set('finishPreEval', false);
-  // player.set('startTask2', false);
-  // player.set('submitCooperationDecision', false);
-  // player.set('cooperationDecision', false);
-  // player.set('completionCode', completionCodes['task1']);
-  // player.set('partnerCooperationDecision', -1);
-  // player.set('partnerCooperationType', 'Share');
-  // player.set('processGameEnd', false);
-  // player.set('acceptSuggestion', []);
-  // player.set('submittedSurvey' ,false);
-
-  playerStatus[player.id] = {
-    cooperationDecision: -1,
-    cooperationType: 'Share',
-    submitReflectionSurvey: false,
-  };
-});
+// ----------------------------------------------------------------
 
 // Called when a participant submits the reCAPTCHA
-Empirica.on("player", "submitRecaptcha", (ctx, { player, submitRecaptcha }) => {
+Empirica.on("player", "submitRecaptcha", (_, { player, submitRecaptcha }) => {
   const data = submitRecaptcha;
 
-  if (data === true) { return; }
+  // Return if debugging
+  if (data === true) {
+    return;
+  }
 
-  if ('data' in data && data['data']) {
-    const secret = process.env['DEPLOYMENT'] == 'dev' ?
-      '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe' :
-      process.env['RECAPTCHA_SECRET'];
-    const response = data['data'];
+  // Run the reCAPTCHA test
+  if ("data" in data && data["data"]) {
+    const secret =
+      process.env["DEPLOYMENT"] == "dev"
+        ? "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"
+        : process.env["RECAPTCHA_SECRET"];
+    const response = data["data"];
 
-    axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${response}`,
-      {},
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8"
-        },
-      })
+    axios
+      .post(
+        `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${response}`,
+        {},
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          },
+        }
+      )
       .then((resp) => {
+        // Update participant with test results
         const respData = resp.data;
         if (respData.success) {
-          player.set('passedRecaptcha', true);
+          player.set("passedRecaptcha", true);
           Empirica.flush(); // Allows asynchronous state updates
         } else {
-          player.set('passedRecaptcha', false);
+          player.set("passedRecaptcha", false);
         }
       });
   }
 });
 
 // Called when a participant submits the consent form
-Empirica.on("player", "submitConsentForm", (ctx, { player, submitConsentForm }) => {
-  const consentFormResponse = submitConsentForm;
-  let passedConsentForm = true;
-  for (q in consentFormResponse) {
-    if (consentFormResponse[q] != 'yes') { passedConsentForm = false; }
-  }
-  player.set('passedConsentForm', passedConsentForm);
-});
-
-
-function updatePreEvalMessageSchedule(player) {
-  if (preEvalTimers[player.id]) clearInterval(preEvalTimers[player.id]);
-
-  setTimeout(() => {
-    let preEvalStep = player.get('preEvalStep');
-    let oldMsgs = player.get('preEvalMessages') || [];
-
-    if (preEvalStep >= botTexts['preEvalMessages'].length) { 
-      player.set('finishPreEval', true);
-      Empirica.flush();
-      return; 
-    }
-
-    player.set('preEvalMessages', [...oldMsgs, {
-      sender: -1,
-      sentTime: 'just now',
-      txt: botTexts['preEvalMessages'][preEvalStep]
-    }]);
-    
-    player.set('preEvalStep', preEvalStep+1);
-    Empirica.flush();
-
-    preEvalTimers[player.id] = setInterval(() => {
-      oldMsgs = player.get('preEvalMessages') || [];
-      preEvalStep = player.get('preEvalStep');
-  
-      if (preEvalStep >= botTexts['preEvalMessages'].length) {
-        player.set('finishPreEval', true);
-        Empirica.flush();
-        clearInterval(preEvalTimers[player.id]);
-        return;
+Empirica.on(
+  "player",
+  "submitConsentForm",
+  (_, { player, submitConsentForm }) => {
+    // Ensure participants consent
+    const consentFormResponse = submitConsentForm;
+    let passedConsentForm = true;
+    for (q in consentFormResponse) {
+      if (consentFormResponse[q] != "yes") {
+        passedConsentForm = false;
       }
-  
-      player.set('preEvalMessages', [...oldMsgs, {
-        sender: -1,
-        sentTime: 'just now',
-        txt: botTexts['preEvalMessages'][preEvalStep]
-      }]);
-      
-      player.set('preEvalStep', preEvalStep+1);
-      Empirica.flush();
-    }, 1000 * 60);
-  }, 1000 * 5); // 5 seconds for reply
-}
+    }
 
-Empirica.on("player", "startPreEval", (ctx, { player, startPreEval }) => {
-  updatePreEvalMessageSchedule(player);
-});
+    // Update participant with whether they consent to participate in the experiment
+    player.set("passedConsentForm", passedConsentForm);
+  }
+);
 
-Empirica.on("player", "sendPreEvalMsg", (ctx, { player, sendPreEvalMsg }) => {
-  updatePreEvalMessageSchedule(player);
-});
+// Called when a participant submits the opinion survey
+Empirica.on(
+  "player",
+  "submitOpinionSurvey",
+  (_, { player, submitOpinionSurvey }) => {
+    // Ensure that participants have an opinion about something
+    let hasSomeOpinion = false;
+    for (const q in submitOpinionSurvey) {
+      if (submitOpinionSurvey[q] != "3") {
+        hasSomeOpinion = true;
+        break;
+      }
+    }
 
-Empirica.on("player", "submitOpinionSurvey", (ctx, { player, submitOpinionSurvey }) => {
-  // console.log(submitOpinionSurvey);
-  let hasSomeOpinion = false;
-  for (const q in submitOpinionSurvey) {
-    if (submitOpinionSurvey[q] != '3') {
-      hasSomeOpinion = true; break;
+    // Stop the experiment for participants who report no opinion
+    if (!hasSomeOpinion) {
+      player.set("end", true);
+      player.set("endReason", "noOpinion");
+      player.exit("noOpinion");
+    } else {
+      submittedOpinionSurvey.add(player.id);
     }
   }
-  if (!hasSomeOpinion) {
-    player.set('end', true);
-    player.set('endReason', 'noOpinion');
-    player.exit('noOpinion');
-  } else {
-    submittedOpinionSurvey.add(player.id);
+);
+
+// Called when a participant submits the reflection survey
+Empirica.on(
+  "player",
+  "submitReflectionSurvey",
+  (_, { player, submitReflectionSurvey }) => {
+    // Update participant status
+    if (playerStatus[player.id])
+      playerStatus[player.id].submitReflectionSurvey = true;
   }
-  
-});
+);
 
-Empirica.on("player", "submitReflectionSurvey", (ctx, { player, submitReflectionSurvey }) => {
-  const reflectionSurveyResponse = submitReflectionSurvey;
-  if (playerStatus[player.id]) playerStatus[player.id].submitReflectionSurvey = true;
-  // player.set('submittedSurvey', true);
-  const partner = null;
-});
+// Called when a participant requests an early finish to the chat step
+Empirica.on(
+  "player",
+  "requestEarlyFinish",
+  (_, { player, requestEarlyFinish }) => {
+    const chatChannel = player.get("chatChannel");
+    const partnerId = gamePairs[player.id];
+    const partner = player.currentGame.players.filter(
+      (p) => p.id == partnerId
+    )[0];
+    partner.set("forceEarlyFinish", true);
 
-Empirica.on("player", "requestEarlyFinish", (ctx, { player, requestEarlyFinish }) => {
-  
-  const chatChannel = player.get('chatChannel');
-  const partnerId = gamePairs[player.id];
-  const partner = player.currentGame.players.filter((p) => p.id == partnerId)[0];
-  partner.set('forceEarlyFinish', true);
-  
-  const cooperationDiscussionPrompts = ['Time\'s up! Thank you for discussing your opinions.',
-    'Finally, you have a few minutes to discuss how to allocate your bonus.',
-    'If you share your bonus with each other, you will both receive 2x the amount you share.',
-    "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus."];
-  const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map((el) => { return {
-    sender: -1,
-    sentTime: 'just now',
-    txt: el
-  }});
+    // Send the prompts for the cooperation discussion that follows the chat step
+    const cooperationDiscussionPrompts = [
+      "Time's up! Thank you for discussing your opinions.",
+      "Finally, you have a few minutes to discuss how to allocate your bonus.",
+      "If you share your bonus with each other, you will both receive 1.5x the amount you share.",
+      "You may also choose to keep your bonus to yourselves or pay to decrease your partner's bonus.",
+    ];
+    const cooperationDiscussionMsgs = cooperationDiscussionPrompts.map((el) => {
+      return {
+        sender: -1,
+        sentTime: "just now",
+        txt: el,
+      };
+    });
 
-  const msgs = player.currentGame.get(chatChannel) || [];
-  
-  player.currentGame.set(chatChannel, [...msgs, ...cooperationDiscussionMsgs]);
-  player.currentGame.set('currentStage', 'cooperationDiscussion')
-});
+    const msgs = player.currentGame.get(chatChannel) || [];
 
+    player.currentGame.set(chatChannel, [
+      ...msgs,
+      ...cooperationDiscussionMsgs,
+    ]);
+
+    // Update the participants' current stage to cooperation discussion
+    player.currentGame.set("currentStage", "cooperationDiscussion");
+  }
+);
+
+// Called when a participant requests an early finish to the chat step so we can record the time
 Empirica.on("game", "earlyFinishTime", (ctx, { game, earlyFinishTime }) => {
-  
-  const playerId = earlyFinishTime['playerId'];
-  const finishTime = earlyFinishTime['finishTime'];
+  const playerId = earlyFinishTime["playerId"];
+  const finishTime = earlyFinishTime["finishTime"];
 
   const player = game.players.filter((p) => p.id == playerId)[0];
   const partnerId = gamePairs[player.id];
   const partner = game.players.filter((p) => p.id == partnerId)[0];
-  
-  player.set('earlyFinishTime', finishTime);
-  partner.set('earlyFinishTime', finishTime);
+
+  player.set("earlyFinishTime", finishTime);
+  partner.set("earlyFinishTime", finishTime);
 });
 
-Empirica.on("game", "partnerAnswer", (ctx, { game, partnerAnswer }) => {
+// Called when a participant writes a report on their partner
+Empirica.on("game", "partnerAnswer", (_, { game, partnerAnswer }) => {
   const partnerId = gamePairs[partnerAnswer.playerId];
   const partner = game.players.filter((player) => player.id == partnerId)[0];
   if (partner) {
-    partner.set('partnerAnswer', partnerAnswer.partnerAnswer);
+    // Store this participant's opinion of their partner so the partner can read it
+    partner.set("partnerAnswer", partnerAnswer.partnerAnswer);
   }
 });
 
-Empirica.on("game", "submitCooperationDecision", (ctx, { game, submitCooperationDecision }) => {
+// Called when a participant submits their cooperation decision
+Empirica.on(
+  "game",
+  "submitCooperationDecision",
+  (_, { game, submitCooperationDecision }) => {
+    const val = submitCooperationDecision;
 
-  const val = submitCooperationDecision;
+    // Return if no data is present
+    if (!val["playerId"]) {
+      return;
+    }
 
-  if (!val['playerId']) { return; }
+    const player = game.players.filter(
+      (player) => player.id == val["playerId"]
+    )[0];
+    const partner = game.players.filter(
+      (player) => player.id == gamePairs[val.playerId]
+    )[0];
 
-  const player = game.players.filter((player) => player.id == val['playerId'])[0];
-  const partner = game.players.filter((player) => player.id == gamePairs[val.playerId])[0];
+    // Store this participant's decision with their partner (used to calculate payment)
+    partner.set("partnerCooperationDecision", val.cooperationDecision);
+    partner.set("partnerCooperationType", val.cooperationType);
 
+    playerStatus[val.playerId].cooperationDecision = val.cooperationDecision;
+    playerStatus[val.playerId].cooperationType = val.cooperationType;
 
-  partner.set('partnerCooperationDecision', val.cooperationDecision);
-  partner.set('partnerCooperationType', val.cooperationType);
+    player.set("completionCode", completionCodes["task2"]);
 
-
-  playerStatus[val.playerId].cooperationDecision = val.cooperationDecision;
-  playerStatus[val.playerId].cooperationType = val.cooperationType;
-
-  if (playerStatus[partner.id].cooperationDecision > -1) {
-    // if (val.cooperationDecision == 2) {
-      // Mutual cooperation
-    partner.set('completionCode', completionCodes['task2']);
-    // }
-    partner.set('partnerFinished', true);
-    player.set('partnerFinished', true);
+    // Set this pair as "finished" if both the participant and their partner has made a cooperation decision
+    if (playerStatus[partner.id].cooperationDecision > -1) {
+      partner.set("partnerFinished", true);
+      player.set("partnerFinished", true);
+    }
   }
-
-  // if (playerStatus[val.partnerId].cooperationDecision == 2 && val.cooperationDecision == 2) {
-    // Mutual cooperation
-    player.set('completionCode', completionCodes['task2']);
-  // } else if (val.cooperationDecision == 2) {
-    // player.set('completionCode', completionCodes['cooperation']);
-  // } else if (val.cooperationDecision == 1) {
-    // player.set('completionCode', completionCodes['defection']);
-  // }
-
-});
+);
 
 // Called when each participant joins the lobby
-Empirica.on("game", 'startLobby', (ctx, { game }) => {
+Empirica.on("game", "startLobby", (_, { game }) => {
   // Start a timer when the first person finishes onboarding
-  console.log('starting lobby');
-  if (typeof (game.get('lobbyTimeout')) == 'undefined') {
+  console.log("starting lobby");
+  if (typeof game.get("lobbyTimeout") == "undefined") {
     const now = Date.now();
     if (game.lobbyConfig) {
       const expirationTS = now + game.lobbyConfig.duration / 1000000;
-      game.set('lobbyTimeout', (new Date(expirationTS)).toISOString());
+      game.set("lobbyTimeout", new Date(expirationTS).toISOString());
     }
   }
 });
 
-
-// Manually set cooperation decision if partner became unresponsive
-Empirica.on('player', 'processGameEnd', (ctx, {player, processGameEnd}) => {
-
-  const partnerCooperationDecision = player.get('partnerCooperationDecision') || -1;
-  if (partnerCooperationDecision < 0) {
-    // player.set('partnerCooperationDecision', 0);
-  }
-
-});
-
-Empirica.on("game", 'reportPartner', (ctx, { game, reportPartner }) => {
-  // Start a timer when the first person finishes onboarding
-  console.log(reportPartner);
+// Called if a participant reports their partner for bad behavior
+Empirica.on("game", "reportPartner", (_, { game, reportPartner }) => {
   const p = game.players.filter((p) => p.id == reportPartner.victim)[0];
-  const partner = game.players.filter((p) => p.id == gamePairs[reportPartner.victim])[0];
+  const partner = game.players.filter(
+    (p) => p.id == gamePairs[reportPartner.victim]
+  )[0];
+
+  // End the experiment for this pair
   if (p) {
-    p.set('end', true);
-    p.set('endReason', 'reportPartner');
-    p.exit('reportPartner');
+    p.set("end", true);
+    p.set("endReason", "reportPartner");
+    p.exit("reportPartner");
   }
   if (partner) {
-    partner.set('end', true);
-    partner.set('endReason', 'reported');
-    partner.exit('reported');
+    partner.set("end", true);
+    partner.set("endReason", "reported");
+    partner.exit("reported");
   }
+});
 
+// Debugging
+// (Unused) callback from Empirica
+Empirica.onRoundStart(({ round }) => {
+  console.log("round started");
+});
+
+// (Unused) callback from Empirica
+Empirica.onStageStart(({ stage }) => {
+  console.log("stage started");
+});
+
+// (Unused) callback from Empirica
+Empirica.onStageEnded(({ stage }) => {
+  console.log("stage ended");
+});
+// (Unused) callback from Empirica
+Empirica.onRoundEnded(({ round }) => {});
+
+// (Unused) callback from Empirica
+Empirica.onGameEnded(({ game }) => {
+  console.log("game ended");
 });

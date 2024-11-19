@@ -1,3 +1,11 @@
+#
+# Filename: setup_model_mistral.py
+# Author: Elijah Claggett
+#
+# Description:
+# This file exports variables that configure a local Mistral model for generating text
+#
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, TextIteratorStreamer
 
@@ -58,6 +66,7 @@ relational_system_msgs = [
     '[INST] You will be provided a chat log between two people and a moderator. Your task is to continue the conversation by simulating the person labeled "YOU". Share your opinions and ask about your partner\'s when appropriate to do so. Employ perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you. Always respond in 1-2 complete sentences. Example Chat Log:\n\n',
 ]
 
+# Helper function for generating a prompt compatible with this model
 def generatePrompt(previousMsgs, pairType, topic, topicAgree, treatmentMode):
     # previousMsgs: "MODERATOR: XX\n\nYOU: XX\n\n PARTNER: \n\n"
     # PairType: 0= in-group 1= out-group 2=personalized

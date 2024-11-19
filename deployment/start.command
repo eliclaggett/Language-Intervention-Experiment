@@ -1,4 +1,19 @@
 #!/bin/bash
+
+################################################################################
+# Filename: start.command
+# Author: Elijah Claggett
+# Date: January 24, 2024
+# Description: Starts this Empirica experiment on the server
+#
+# Usage:
+#   ./deployment/start.command
+#
+# Notes:
+#   Please deploy the latest version of the experiment before running this script
+#
+################################################################################
+
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")/../" ; pwd -P )
 cd "$parent_path"
 
@@ -25,7 +40,7 @@ function cleanup()
 }
 
 # Keep script open until an interrupt is sent
-trap cleanup SIGINT
+trap cleanup EXIT
 
 ssh -i deployment/server.pem $SERVER_SSH -tt bash << HERE
     cd $SERVER_PATH

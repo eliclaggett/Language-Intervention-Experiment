@@ -1,10 +1,12 @@
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, TextIteratorStreamer
+#
+# Filename: setup_model.py
+# Author: Elijah Claggett
+#
+# Description:
+# This file exports variables that configure an OpenAI model for generating text
+#
 
 model_name = 'openai'
-# model_name = 'Nexusflow/Starling-LM-7B-beta'
-# model_name = 'mistralai/Mistral-7B-Instruct-v0.2'
-# model_name = 'meta-llama/Meta-Llama-3-8B-Instruct'
 
 # [prefix, suffix]
 model_prompt_templates = {
@@ -22,7 +24,7 @@ model_prompt_templates = {
     ]
 }
 
-# Models:
+# List of Alternative Models:
 # ---------------------------------------------------------------------
 # Nexusflow/Starling-LM-7B-beta
 # Prompt Template: (available as tokenizer.chat_template)
@@ -62,47 +64,13 @@ model_prompt_templates = {
 # Prompt template:
 # [INST] Instruction [/INST]
 
-
-
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
-
+# Setup the model
 if model_name == 'openai':
     config = None
     model = None
     tokenizer = None
     streamer = None
     generate_kwargs = None
-else:
-    config = AutoConfig.from_pretrained(model_name)
-
-    model = AutoModelForCausalLM.from_pretrained(model_name,
-                                                #  torch_dtype=torch.float16,
-                                                torch_dtype=torch.bfloat16,
-                                                device_map=device, config=config)
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-                                            #   use_fast=True) # Do NOT use fast tokenizer apparently
-
-    streamer = TextIteratorStreamer(tokenizer,
-                                    skip_prompt=True,
-                                    skip_special_tokens=True,
-                                    timeout=15.0,
-                                    )
-
-    generate_kwargs = dict(
-            # model_inputs,
-            streamer=streamer,
-            max_new_tokens=256,
-            do_sample=True,
-            top_p=1,
-            repetition_penalty=1.1,
-            top_k=40,
-            temperature=0.95,
-            pad_token_id=tokenizer.pad_token_id,
-            eos_token_id=tokenizer.eos_token_id
-        )
-
 
 topics = [
         "evolution being taught as a fact of biology",
@@ -127,14 +95,7 @@ relational_system_msgs = [
     '###Task Description:\nYou will be provided a chat log between two people and a moderator. Your task is to continue the conversation by simulating the person labeled "YOU". Share your opinions and ask about your partner\'s when appropriate to do so. Employ perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you. Always respond in 1-2 complete sentences. Example Chat Log:\n\n',
 ]
 
-def generate_template(prompt, args):
-    encoded = tokenizer(prompt, return_tensors='pt', add_special_tokens=False)
-    encoded['input_ids'] = encoded['input_ids'].to(device)
-    encoded['attention_mask'] = encoded['attention_mask'].to(device)
-    kwargs = generate_kwargs.copy()
-    kwargs.update(args)
-    return model.generate(encoded['input_ids'], **kwargs)
-
+# Helper function for getting linguistic techniques for relational AI
 def getLinguisticTechniques(pairType, topicAgree, topic):
     t = ''
 
@@ -143,29 +104,20 @@ def getLinguisticTechniques(pairType, topicAgree, topic):
         # Relational
         if pairType == 0:
             # In-group
-
-            # t = f"{belief_str} and your partner has the same opinion. Since you and your partner have a shared ideology, use linguistic style matching and linguistic accomodation techniques to build closeness with your partner. Copy the language style of your partner as closely as possible."
             t = f" Since you and your partner have a shared ideology, use linguistic style matching and linguistic accomodation techniques to build closeness with your partner. Copy the language style of your partner as closely as possible."
             pass
         else:
-            # t = f"{belief_str} but your partner feels differently. Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
-            t = f" Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
             # Out-group
+            t = f" Since you and your partner have a different ideologies, use perspective-sharing, humanization, and conversational receptiveness to build rapport with your partner even though they disagree with you."
             pass
     else:
         # Personalized
-        # t = {agreement_type[topicAgree]} with {topics[topic]}'
         t = f" Mirror the language style of the person labeled \"YOU\" and others who also {belief_str} as closely as possible."
         pass
     return t
 
+# Helper function for generating a prompt compatible with this model
 def generatePrompt(previousMsgs, pairType, topic, topicAgree, treatmentMode):
-    # previousMsgs: "MODERATOR: XX\n\nYOU: XX\n\n PARTNER: \n\n"
-    # PairType: 0= in-group 1= out-group 2=personalized
-    # Topic: 0-6
-    # topicAgree: 0-1
-    # treatmentMode: "full"/"partial"
-
     # Write initial instruction
     prompt = model_prompt_templates[model_name][0]
     if pairType < 2:
@@ -194,11 +146,3 @@ def generatePrompt(previousMsgs, pairType, topic, topicAgree, treatmentMode):
     prompt += model_prompt_templates[model_name][1]
     
     return prompt
-
-
-
-
-
-    
-
-    
