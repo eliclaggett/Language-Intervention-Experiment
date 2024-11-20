@@ -7,12 +7,7 @@
  */
 
 // Imports
-import {
-  Batch,
-  ClassicListenersCollector,
-  Game,
-  Player,
-} from "@empirica/core/admin/classic";
+import { ClassicListenersCollector } from "@empirica/core/admin/classic";
 import * as fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
