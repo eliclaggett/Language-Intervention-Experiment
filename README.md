@@ -22,7 +22,7 @@
 > **Note:**
 > This repository is the companion code to our research paper under review. We do not recommend deploying this code for general use.
 
-We conducted an experiment with 482 participants who communicated with either social in-group partners sharing their views or out-group partners with differing views, based on a preliminary survey. Participants received either "personalized" message suggestions aligned with their own views and conversation styles or "relational" suggestions using conversation styles tailored to whether their partner was in-group or out-group.  Following the conversations, participants engaged in a cooperation game designed to measure trust behaviorally. **Our results show that while personal assistance widened the cooperation gap, relational assistance significantly improved out-group cooperation to match in-group levels.**
+We conducted an experiment with 482 participants who communicated with either social in-group partners sharing their views or out-group partners with differing views, based on a preliminary survey. Participants received either "personalized" message suggestions aligned with their own views and conversation styles or "relational" suggestions using conversation styles tailored to whether their partner was in-group or out-group. Following the conversations, participants engaged in a cooperation game designed to measure trust behaviorally. **Our results show that while personal assistance widened the cooperation gap, relational assistance significantly improved out-group cooperation to match in-group levels.**
 
 For more details, please see our full paper in February 2025.
 
@@ -46,10 +46,8 @@ There is no single executable for this web application, so please follow install
 ## Authors
 
 <p align="center">
-  <span>
-    <img src="/img1.png" width="100" />
+    <img src="https://raw.githubusercontent.com/eliclaggett/Language-Intervention-Experiment/refs/heads/main/assets/eli.png" width="80" valign="middle"/>
     <strong>Eli Claggett</strong>
-  </span>
 </p>
 
 ## License
